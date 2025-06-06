@@ -1,5 +1,9 @@
 # Simple Flask API Demo With Nginx Reverse Proxy 
 
+## Structure
+* `app/`: Flask API and Dockerfile.
+* `terraform/`: Terraform code managed by Terragrunt for AWS resources.
+
 
 ## Flask backend
 
@@ -47,4 +51,3 @@ Deployment order following the dependency hierarchy:
 * security-groups/flask-backend sg
 * ec2/flask-backend
 * ec2/nginx-proxy
-
