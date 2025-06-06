@@ -7,6 +7,11 @@
 
 ## Flask backend
 
+### Folder Structure
+* `app/`: Flask API and Dockerfile.
+* `terraform/`: Terraform code managed by Terragrunt for AWS resources.
+
+
 ### Prerequisites 
 * AWS Credentials: Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in GitHub Secrets.
 * ssh key for the instances from aws 
@@ -31,23 +36,24 @@
 ### Backend Setup
 1. Build and test the Flask API locally:
 ```
-   bash
-   cd app
-   docker build -t flask-api .
-   docker run -p 5001:5001 flask-api
+bash
+cd app
+docker build -t flask-api .
+docker run -p 5001:5001 flask-api
 
 curl  http://127.0.0.1:5001
 curl -X POST -H "Content-Type: application/json" -d '{"name":"Laptop","price":999.99}' http://localhost:5001/item/1
 curl http://localhost:5001/item/1
 ```
 
-## Terraform infrastructure
-Infrastructure resource definitions are under live/eu-west-1 folder.
-Deployment order following the dependency hierarchy: 
+## Terraform Deployment Order
 
-* ami/amazon-linux-minimal
-* flask-demo-vpc
-* security-groups/nginx-proxy
-* security-groups/flask-backend sg
-* ec2/flask-backend
-* ec2/nginx-proxy
+Deployment order following the dependency hierarcy:
+
+* live/eu-west-1/flask-demo-vpc
+* live/eu-west-1/security-groups/nginx-proxy
+* live/eu-west-1/security-groups/flask-backend
+* live/eu-west-1/ami/amazon-linux-minimal
+* live/eu-west-1/ec2/flask-backend
+* live/eu-west-1/ec2/nginx-proxy
+
