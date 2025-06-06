@@ -14,3 +14,11 @@ venv/
 # VS Code
 .vscode/
 *.code-workspace
+
+#Terragrunt and terraform
+.terragrunt-cache/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform
+secrets.tf
+.tool-versions

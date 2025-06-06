@@ -1,10 +1,18 @@
 ## Simple Flask API Demo With Nginx Reverse Proxy 
 
+### Prerequisites 
+* AWS Credentials: Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in GitHub Secrets.
+* ssh key for the instances from aws 
+* Terraform: Version 1.8.0 or higher
+* Terragrunt: Version 0.55.1 or higher
+* awscli version 2
+* Docker, python3
+
 ### Features
 * In-Memory Storage: Uses a dictionary for simplicity (AWS Free Tier compatible, no database needed).
 * Request Validation: Uses reqparse to enforce required fields (name, price).
 * Error Handling: Returns appropriate HTTP status codes (e.g., 404 for not found, 400 for bad requests).
-* Nginx Integration: The API listens on port 5000 which is processed by Nginx reverse proxy 
+* Nginx Integration: The API listens on port 5001.
 
 ### Endpoints
 * GET /items: List all items.
