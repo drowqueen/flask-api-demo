@@ -4,7 +4,7 @@
 * In-Memory Storage: Uses a dictionary for simplicity (AWS Free Tier compatible, no database needed).
 * Request Validation: Uses reqparse to enforce required fields (name, price).
 * Error Handling: Returns appropriate HTTP status codes (e.g., 404 for not found, 400 for bad requests).
-* Nginx Integration: The API listens on port 5000 which is processed by Nginx reverse proxy 
+* Nginx Integration: The API listens on port 5001
 
 ### Endpoints
 * GET /items: List all items.
