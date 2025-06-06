@@ -1,4 +1,11 @@
-## Simple Flask API Demo With Nginx Reverse Proxy 
+# Simple Flask API Demo With Nginx Reverse Proxy 
+
+## Structure
+* `app/`: Flask API and Dockerfile.
+* `terraform/`: Terraform code managed by Terragrunt for AWS resources.
+
+
+## Flask backend
 
 ### Folder Structure
 * `app/`: Flask API and Dockerfile.
@@ -26,7 +33,7 @@
 * PUT /item/<item_id>: Update or create an item.
 * DELETE /item/<item_id>: Delete an item.
 
-## Setup
+### Backend Setup
 1. Build and test the Flask API locally:
 ```
 bash
@@ -38,6 +45,7 @@ curl  http://127.0.0.1:5001
 curl -X POST -H "Content-Type: application/json" -d '{"name":"Laptop","price":999.99}' http://localhost:5001/item/1
 curl http://localhost:5001/item/1
 ```
+
 ## Terraform Deployment Order
 
 Deployment order following the dependency hierarcy:
@@ -48,3 +56,4 @@ Deployment order following the dependency hierarcy:
 * live/eu-west-1/ami/amazon-linux-minimal
 * live/eu-west-1/ec2/flask-backend
 * live/eu-west-1/ec2/nginx-proxy
+

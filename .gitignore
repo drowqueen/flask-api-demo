@@ -20,9 +20,9 @@ venv/
 terraform.tfstate
 terraform.tfstate.backup
 .terraform
-secrets.tf
 *.tfstate
 *.tfstate.backup
+secrets.tf
 
 #asdf
 .tool-versions

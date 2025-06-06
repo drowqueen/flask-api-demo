@@ -35,6 +35,7 @@ inputs = {
     }
   ]
   tags = {
-    "Owner" = "terragrunt"
+    "Owner" = "terragrunt",
+    "Env"   = "dev"
   }
 }
