@@ -1,0 +1,13 @@
+include {
+  path = find_in_parent_folders()
+}
+
+terraform {
+  source = "${get_parent_terragrunt_dir("root")}/..//modules/ami"
+}
+
+inputs = {
+  ami_name_filter = "al2023-ami-minimal-*"
+  ami_architecture = "x86_64"
+  ami_owners       = ["amazon"]
+}
