@@ -13,6 +13,11 @@ item_parser = reqparse.RequestParser()
 item_parser.add_argument("name", type=str, required=True, help="Name cannot be blank")
 item_parser.add_argument("price", type=float, required=True, help="Price cannot be blank")
 
+# Root route for testing API availability
+@app.route("/")
+def home():
+  return jsonify({"message": "API is running"}), 200
+
 # Resource class for individual item endpoints (/item/<id>)
 class Item(Resource):
     def get(self, item_id):

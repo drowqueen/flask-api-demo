@@ -36,10 +36,10 @@ variable "egress_cidr_blocks" {
   default = []
 }
 
-/*variable "egress_with_cidr_blocks" {
+variable "egress_with_cidr_blocks" {
   type    = list(map(string))
   default = []
-}*/
+}
 
 variable "egress_rules" {
   type    = list(string)

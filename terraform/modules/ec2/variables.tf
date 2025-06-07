@@ -3,10 +3,16 @@ variable "name" {
   type        = string
   default     = "ec2-instance"
 }
-
-variable "ami" {
-  description = "ID of AMI to use for the EC2 instance"
+variable "ami_ssm_parameter" {
+  description = "SSM parameter name for the AMI ID (optional)"
   type        = string
+  default     = null
+}
+
+variable "ami_id" {
+  description = "Direct AMI ID to use if SSM parameter is not provided (optional)"
+  type        = string
+  default     = null
 }
 
 variable "availability_zone" {
@@ -18,6 +24,12 @@ variable "instance_type" {
   description = "The type of instance to start"
   type        = string
   default     = "t2.micro"
+}
+
+variable "iam_instance_profile" {
+  description = "The type of instance to start"
+  type        = string
+  default     = null
 }
 
 variable "key_name" {
@@ -50,5 +62,23 @@ variable "associate_public_ip_address" {
 variable "tags" {
   description = "A mapping of tags to assign to the resource"
   type        = map(string)
+  default     = {}
+}
+
+variable "instance_count" {
+  description = "Number of EC2 instances to create"
+  type        = number
+  default     = 1
+}
+
+variable "root_block_device" {
+  description = "Configuration for the root block device"
+  type        = list(map(string))
+  default     = []
+}
+
+variable "instance_tags" {
+  description = "Map of tags for each instance, keyed by count index"
+  type        = map(map(string))
   default     = {}
 }
