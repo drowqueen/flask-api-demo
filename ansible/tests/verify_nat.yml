@@ -1,0 +1,7 @@
+# playbooks/verify_nat.yml
+- name: Verify NAT instance internet access
+  hosts: tag_Name_flask-demo-nat
+  become: true
+  tasks:
+    - name: Include verification tasks
+      include_tasks: ../roles/nat_instance/tasks/verify.yml

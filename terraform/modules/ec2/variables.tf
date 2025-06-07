@@ -26,6 +26,12 @@ variable "instance_type" {
   default     = "t2.micro"
 }
 
+variable "source_dest_check" {
+  description= "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs"
+  type = bool
+  default = true
+}
+
 variable "iam_instance_profile" {
   description = "The type of instance to start"
   type        = string

@@ -54,13 +54,23 @@ build {
 
   provisioner "shell" {
     inline = [
-      "echo 'Listing contents of /opt/flask:'",
-      "ls -la /opt/flask",
+      "sudo dnf update -y",
+      "sudo dnf install -y docker",
+      "sudo systemctl enable docker",
+      "sudo systemctl start docker",
+      "sudo usermod -a -G docker ec2-user",
       "cd /opt/flask",
       "if [ ! -f Dockerfile ]; then echo 'ERROR: Dockerfile not found in /opt/flask'; exit 1; fi",
       "if [ ! -f app.py ]; then echo 'ERROR: app.py not found in /opt/flask'; exit 1; fi",
       "sudo docker build -t flask-app-image:latest .",
-      "sudo docker save flask-app-image:latest | sudo tee /opt/flask/flask-app-image.tar > /dev/null",
+      "sudo docker save -o /tmp/flask-app-image.tar flask-app-image:latest",
+      "sudo mkdir -p /var/lib/docker/images",
+      "sudo mv /tmp/flask-app-image.tar /var/lib/docker/images/",
+      "sudo chown -R ec2-user:ec2-user /var/lib/docker/images",
+      "sudo docker run -d --rm -p 5001:5001 --name flask-app flask-app-image:latest",
+      "sleep 5",
+      "curl -v http://localhost:5001",
+      "sudo docker stop flask-app",
       "sudo docker system prune -af",
       "sudo rm -rf /var/cache/dnf/*"
     ]

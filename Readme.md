@@ -88,6 +88,7 @@ export BACKEND_TAG=flask-backend
    ```bash
    cd packer
    packer init flask-backend.pkr.hcl
+   packer validate flask-backend.pkr.hcl
    packer build flask-backend.pkr.hcl
    ```
 2. Extract and store the AMI ID in SSM:

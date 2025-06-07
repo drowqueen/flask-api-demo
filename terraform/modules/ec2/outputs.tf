@@ -12,3 +12,8 @@ output "private_ip" {
   description = "List of private IP addresses of the EC2 instances"
   value       = [for instance in module.ec2_instance : instance.private_ip]
 }
+
+output "network_interface_id" {
+  description = "The primary network interface ID of the NAT instance"
+  value       = module.ec2_instance[0].primary_network_interface_id
+}

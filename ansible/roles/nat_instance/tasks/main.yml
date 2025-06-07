@@ -1,0 +1,24 @@
+# roles/nat_instance/tasks/main.yml
+- name: Ensure IP forwarding is enabled at runtime
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: yes
+
+- name: Ensure IP forwarding is enabled on boot
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^net.ipv4.ip_forward'
+    line: 'net.ipv4.ip_forward = 1'
+    create: yes
+
+- name: Add MASQUERADE rule for NAT
+  command: iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE
+  register: check_nat_rule
+  failed_when: false
+  changed_when: false
+
+- name: Insert NAT rule if missing
+  command: iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+  when: check_nat_rule.rc != 0
