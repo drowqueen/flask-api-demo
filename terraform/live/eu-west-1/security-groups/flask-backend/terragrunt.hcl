@@ -23,7 +23,8 @@ inputs = {
       from_port   = 22
       to_port     = 22
       protocol    = "tcp"
-      cidr_blocks = "0.0.0.0/0"
+      cidr_blocks =  join(",", dependency.vpc.outputs.public_subnets_cidr_blocks)
+      description = "Allow SSH only from the public subnets"
     }
   ]
   ingress_with_source_security_group_id = [
@@ -32,6 +33,16 @@ inputs = {
       to_port                  = 5001
       protocol                 = "tcp"
       source_security_group_id = dependency.nginx-sg.outputs.security_group_id
+      description              = "Allow Flask traffic from nginx-proxy"
+    }
+  ]
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = "0.0.0.0/0"
+      description = "Allow all outbound traffic"
     }
   ]
   tags = {

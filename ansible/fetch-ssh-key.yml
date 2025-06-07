@@ -1,0 +1,86 @@
+---
+- name: Install Python 3 and AWS CLI on Nginx proxy
+  hosts: tag_Name_nginx_proxy
+  become: true
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: true
+
+    - name: Install Python 3
+      ansible.builtin.apt:
+        name: python3
+        state: present
+      changed_when: true
+
+    - name: Install AWS CLI
+      ansible.builtin.apt:
+        name: awscli
+        state: present
+      changed_when: true
+
+- name: Configure SSH key on Nginx proxy
+  hosts: tag_Name_nginx_proxy
+  become: true
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Create .ssh directory
+      ansible.builtin.file:
+        path: /home/ubuntu/.ssh
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: "0700"
+
+    - name: Fetch SSH key from SSM
+      ansible.builtin.command: >
+        aws ssm get-parameter
+        --name "/flask-demo/ssh/flask-demo-key"
+        --with-decryption
+        --region eu-west-1
+        --query Parameter.Value
+        --output text
+      register: ssh_key
+      changed_when: false
+
+    - name: Write SSH key to file
+      ansible.builtin.copy:
+        content: "{{ ssh_key.stdout }}"
+        dest: /home/ubuntu/.ssh/flask-demo.pem
+        owner: ubuntu
+        mode: "0600"
+
+    - name: Get backend hosts from inventory
+      ansible.builtin.set_fact:
+        backend_hosts: "{{ groups['tag_Name_flask_backend'] | map('extract', hostvars, 'ansible_host') | list }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Capture SSH keyscan output for backends
+      ansible.builtin.command: ssh-keyscan -p 22 -t rsa,ecdsa,ed25519 {{ item }}
+      register: keyscan_result
+      loop: "{{ backend_hosts }}"
+      changed_when: false
+      ignore_errors: true
+      delegate_to: localhost
+
+    - name: Debug SSH keyscan output
+      ansible.builtin.debug:
+        msg: "SSH keyscan output for {{ item.item }}: {{ item.stdout | default('No output') }}, stderr: {{ item.stderr | default('No stderr') }}"
+      loop: "{{ keyscan_result.results }}"
+      when: item.rc != 0 or item.stdout == ''
+
+    - name: Update SSH known_hosts on Nginx proxy
+      ansible.builtin.known_hosts:
+        name: "{{ item.item }}"
+        state: present
+        key: "{{ item.stdout }}"
+      loop: "{{ keyscan_result.results }}"
+      when: item.rc == 0 and item.stdout != ''
+      ignore_errors: true

@@ -28,3 +28,23 @@ output "database_subnets" {
   description = "List of IDs of database subnets, empty if not defined"
   value       = length(var.database_subnets) > 0 ? module.vpc.database_subnets : []
 }
+
+output "vpc_cidr" {
+  description = "The CIDR block of the VPC"
+  value       = module.vpc.vpc_cidr_block
+}
+
+output "public_subnets_cidr_blocks" {
+  description = "List of public subnet CIDR blocks"
+  value       = module.vpc.public_subnets_cidr_blocks
+}
+
+output "private_subnets_cidr_blocks" {
+  description = "List of private subnet CIDR blocks"
+  value       = module.vpc.private_subnets_cidr_blocks
+}
+
+output "database_subnets_cidr_blocks" {
+  description = "List of database subnet CIDR blocks"
+  value       = module.vpc.database_subnets_cidr_blocks
+}
