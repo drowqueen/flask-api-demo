@@ -48,3 +48,18 @@ output "database_subnets_cidr_blocks" {
   description = "List of database subnet CIDR blocks"
   value       = module.vpc.database_subnets_cidr_blocks
 }
+
+output "public_route_table_ids" {
+  description = "List of public RTB ids"
+  value       = module.vpc.public_route_table_ids
+}
+
+output "private_route_table_ids" {
+  description = "List of private RTB ids"
+  value       = module.vpc.private_route_table_ids
+}
+
+output "default_security_group_id" {
+  description = "Default security group id"
+  value       = module.vpc.default_security_group_id
+}

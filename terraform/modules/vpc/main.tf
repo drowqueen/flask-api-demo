@@ -14,3 +14,4 @@ module "vpc" {
   map_public_ip_on_launch = var.map_public_ip_on_launch
   tags                    = var.tags
 }
+

@@ -1,5 +1,5 @@
 # Import required Flask and Flask-RESTful modules for building the API
-from flask import Flask
+from flask import Flask, jsonify
 from flask_restful import Api, Resource, reqparse, abort
 
 app = Flask(__name__)
