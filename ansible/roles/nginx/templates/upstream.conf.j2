@@ -1,6 +1,6 @@
 upstream flask_backend {
-{% for backend in active_backends %}
-    server {{ backend.ip }}:{{ backend.port }};
+{% for host in groups['app_servers'] %}
+    server {{ host }}:5000;
 {% endfor %}
 }
 

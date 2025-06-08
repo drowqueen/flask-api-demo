@@ -1,21 +1,11 @@
-- name: Verify NAT connectivity from private instances
-  hosts: tag_Name_flask_backend
-  become: true
+---
+- name: Verify private subnet internet access
+  hosts: app_servers
+  gather_facts: no
+  vars:
+    ansible_user: ubuntu
   tasks:
-    - name: Ping a public IP (Google DNS)
-      command: ping -c 2 8.8.8.8
+    - name: Ping google.com from private instance
+      ansible.builtin.shell: ping -c 3 google.com
       register: ping_result
-      ignore_errors: true
-
-    - name: Print ping result
-      debug:
-        var: ping_result.stdout_lines
-
-    - name: Test HTTPS request to example.com
-      command: curl -I https://example.com
-      register: curl_result
-      ignore_errors: true
-
-    - name: Print curl result
-      debug:
-        var: curl_result.stdout_lines
+      failed_when: ping_result.rc != 0

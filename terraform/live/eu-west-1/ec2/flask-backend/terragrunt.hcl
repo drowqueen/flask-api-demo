@@ -14,10 +14,17 @@ dependency "flask-sg" {
   config_path = "../../security-groups/flask-backend"
 }
 
+dependency "ami" {
+  config_path = "../../ami/amazon-linux2/"
+  mock_outputs = {
+    ami_id = "placeholder-ami-id"
+  }
+}
+
 inputs = {
   name                        = "demo-backend"
   instance_type               = "t2.micro"
-  ami_ssm_parameter           = "/flask-demo/backend/latest-ami"
+  ami_id                      = dependency.ami.outputs.ami_id
   availability_zone           = "eu-west-1a"
   subnet_id                   = dependency.vpc.outputs.private_subnets[0]
   vpc_security_group_ids      = [dependency.flask-sg.outputs.security_group_id]
@@ -30,8 +37,10 @@ inputs = {
     delete_on_termination = true
   }]
   tags = {
-    Owner = "terragrunt"
-    Env   = "dev"
+    Environment    = "dev"
+    Role           = "flask-backend"
+    app_servers    = "true"
+    Owner          = "terragrunt"
   }
   instance_tags = {
     "0" = {

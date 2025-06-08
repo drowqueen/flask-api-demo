@@ -1,24 +1,57 @@
-# roles/nat_instance/tasks/main.yml
-- name: Ensure IP forwarding is enabled at runtime
-  sysctl:
-    name: net.ipv4.ip_forward
-    value: '1'
-    state: present
-    reload: yes
+---
+- name: Detect primary outbound interface
+  ansible.builtin.shell: |
+    ip route get 1.1.1.1 | grep -oP 'dev \K\S+' | head -1
+  register: iface
+  changed_when: false
 
-- name: Ensure IP forwarding is enabled on boot
-  lineinfile:
-    path: /etc/sysctl.conf
-    regexp: '^net.ipv4.ip_forward'
-    line: 'net.ipv4.ip_forward = 1'
-    create: yes
-
-- name: Add MASQUERADE rule for NAT
-  command: iptables -t nat -C POSTROUTING -o eth0 -j MASQUERADE
-  register: check_nat_rule
+- name: Add iptables MASQUERADE rule for outbound traffic
+  ansible.builtin.command: >
+    iptables -t nat -C POSTROUTING -o {{ iface.stdout }} -j MASQUERADE
+  register: check_nat
   failed_when: false
   changed_when: false
 
-- name: Insert NAT rule if missing
-  command: iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-  when: check_nat_rule.rc != 0
+- name: Insert MASQUERADE rule if missing
+  ansible.builtin.command: >
+    iptables -t nat -A POSTROUTING -o {{ iface.stdout }} -j MASQUERADE
+  when: check_nat.rc != 0
+
+- name: Save iptables rules persistently
+  become: true
+  shell: iptables-save > /etc/iptables.rules
+
+- name: Create systemd service to restore iptables rules at boot
+  become: true
+  template:
+    src: nat-iptables.service.j2
+    dest: /etc/systemd/system/nat-iptables.service
+    mode: "0644"
+
+- name: Enable and start NAT iptables restore service
+  become: true
+  systemd:
+    name: nat-iptables
+    enabled: true
+    state: started
+    daemon_reload: yes
+
+- name: Enable and start nat-iptables service
+  ansible.builtin.systemd:
+    name: nat-iptables
+    enabled: true
+    state: started
+
+- name: Ensure IP forwarding at runtime
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: true
+
+- name: Ensure IP forwarding on boot
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    regexp: "^net.ipv4.ip_forward"
+    line: "net.ipv4.ip_forward = 1"
+    create: true

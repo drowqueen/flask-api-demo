@@ -1,0 +1,14 @@
+---
+- name: Test backend connectivity via bastion
+  hosts: app_servers
+  gather_facts: no
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Run uptime on backend servers
+      command: uptime
+      register: uptime_result
+
+    - name: Show uptime output
+      debug:
+        var: uptime_result.stdout

@@ -1,9 +1,0 @@
-# roles/nat_instance/tasks/verify.yml
-- name: Ping a public IP (Google DNS)
-  shell: ping -c 2 8.8.8.8
-  register: ping_result
-  ignore_errors: true
-
-- name: Print ping result
-  debug:
-    var: ping_result.stdout_lines

@@ -1,7 +1,17 @@
-# playbooks/verify_nat.yml
-- name: Verify NAT instance internet access
-  hosts: tag_Name_flask-demo-nat
-  become: true
+---
+- name: Verify NAT instance connectivity
+  hosts: gateway_hosts
+  gather_facts: no
+  vars:
+    ansible_user: ec2-user
   tasks:
-    - name: Include verification tasks
-      include_tasks: ../roles/nat_instance/tasks/verify.yml
+    - name: Ping external IP (8.8.8.8) from NAT instance
+      ansible.builtin.command:
+        cmd: ping -c 3 8.8.8.8
+      register: ping_result
+      ignore_errors: yes
+
+    - name: Fail if NAT cannot reach internet
+      ansible.builtin.fail:
+        msg: "NAT instance cannot reach internet."
+      when: ping_result.rc != 0
