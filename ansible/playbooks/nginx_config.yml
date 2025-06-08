@@ -1,29 +1,9 @@
 ---
-- name: Configure Backend EC2
-  hosts: tag_Name_flask_backend
+- name: Setup Nginx configuration (bastion_hosts)
+  hosts: bastion_hosts
   become: true
-  gather_facts: false
   vars:
-    flask_port: 5001
-    ansible_python_interpreter: /usr/bin/python3.9
-  tasks:
-    - name: Ensure Docker service is started and enabled
-      ansible.builtin.service:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Apply backend role
-      ansible.builtin.include_role:
-        name: backend
-      vars:
-        flask_port: "{{ flask_port }}"
-
-- name: Configure Nginx EC2
-  hosts: tag_Name_nginx_proxy
-  become: true
-  gather_facts: false
-  vars:
+    ansible_user: ec2-user
     flask_port: 5001
     backend_instances:
       - ip: "{{ hostvars['flask-backend-1'].ansible_host }}"
@@ -32,6 +12,9 @@
         port: 5001
     active_backends: "{{ backend_instances }}"
     ansible_python_interpreter: /usr/bin/python3.8
+  roles:
+    - nginx
+  gather_facts: false
   tasks:
     - name: Apply nginx role
       ansible.builtin.include_role:

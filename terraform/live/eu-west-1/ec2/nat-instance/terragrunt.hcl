@@ -35,8 +35,11 @@ inputs = {
   source_dest_check        = false
   key_name                 = "flask-demo"
   tags = {
-    Owner = "terragrunt"
-    Environment = "dev"
+      Environment     = "dev"
+      Role            = "flask-nat"
+      gateway_hosts   = "true"
+      Name            = "flask-nat"
+      Owner           = "terragrunt"
 
   }
 }

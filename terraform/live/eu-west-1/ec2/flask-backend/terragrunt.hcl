@@ -30,8 +30,10 @@ inputs = {
     delete_on_termination = true
   }]
   tags = {
-    Owner = "terragrunt"
-    Env   = "dev"
+    Environment    = "dev"
+    Role           = "flask-backend"
+    app_servers    = "true"
+    Owner          = "terragrunt"
   }
   instance_tags = {
     "0" = {
