@@ -1,8 +1,8 @@
 ---
 - name: Install required packages (docker)
-  yum:
+  apt:
     name:
-      - docker
+      - docker.io
     state: present
     update_cache: yes
 
@@ -12,9 +12,9 @@
     state: started
     enabled: yes
 
-- name: Add ec2-user to docker group (to allow non-root Docker usage)
+- name: Add ubuntu to docker group (to allow non-root Docker usage)
   user:
-    name: ec2-user
+    name: ubuntu
     group: docker
     append: yes
 

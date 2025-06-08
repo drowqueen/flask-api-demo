@@ -8,29 +8,26 @@
     ansible_python_interpreter: /usr/bin/python3
   tasks:
     - name: Check if bootstrap flag exists
-      stat:
-        path: /tmp/bootstrap_done_nat
-      register: bootstrap_flag_nat
+      raw: test -f /tmp/bootstrap_done_nat && echo "exists" || echo "missing"
+      register: bootstrap_flag_check
 
-    - name: Install python 3.8 if flag is not set
+    - name: Install python 3.8 if bootstrap flag is missing
       raw: |
         sudo amazon-linux-extras enable python3.8
         sudo yum clean metadata
         sudo yum install -y python3.8
-      when: not bootstrap_flag_nat.stat.exists
+      when: "'missing' in bootstrap_flag_check.stdout"
 
-    - name: Verify python3.8 installation
+    - name: Verify python3.8 version
       raw: python3.8 --version
       register: python38_version
-      when: not bootstrap_flag_nat.stat.exists
+      when: "'missing' in bootstrap_flag_check.stdout"
 
     - name: Show python3.8 version
       debug:
         var: python38_version.stdout
-      when: not bootstrap_flag_nat.stat.exists
+      when: "'missing' in bootstrap_flag_check.stdout"
 
     - name: Create bootstrap flag to prevent re-running bootstrap tasks
-      file:
-        path: /tmp/bootstrap_done_nat
-        state: touch
-      when: not bootstrap_flag_nat.stat.exists
+      raw: touch /tmp/bootstrap_done_nat
+      when: "'missing' in bootstrap_flag_check.stdout"

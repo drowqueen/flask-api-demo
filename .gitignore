@@ -26,4 +26,7 @@ secrets.tf
 
 #asdf
 .tool-versions
+
+#ansible
 ansible.cfg
+ playbooks/tmp/

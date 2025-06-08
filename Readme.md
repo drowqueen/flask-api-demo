@@ -3,6 +3,17 @@
 
 This project deploys a Flask API with two backend instances (`flask-backend-1` and `flask-backend-2`) behind an NGINX reverse proxy on AWS, using Terraform/Terragrunt, and Ansible for infrastructure and configuration.
 
+## Notes
+- **Free Tier**: Uses `t2.micro` instances and `gp3` volumes
+
+## Planned features
+
+* Fully automated tests incorporated into github actions
+* Script to run playbooks in order for local dev environment testing
+* Zero downtime upgrade of flask backend 
+* Terraform definitions for the custom route and routing table associations from nat to private subnets
+
+
 ## Folder Structure
 - `app/`: Flask API source code and Dockerfile.
 - `terraform/`: Terraform/Terragrunt code for AWS resources.
@@ -19,6 +30,8 @@ This project deploys a Flask API with two backend instances (`flask-backend-1` a
   - Docker
   - Python 3.9+
 - **AWS Region**: `eu-west-1`
+
+**NOTE:** Private subnet where nat instance sits needs to be associated with the proper route table, otherwise backends will not be able to download packages.
 
 ## Flask Backend
 ### Features
@@ -55,9 +68,11 @@ Deploy resources in this order to respect dependencies:
 1. `terraform/live/eu-west-1/flask-demo-vpc`
 2. `terraform/live/eu-west-1/security-groups/nginx-proxy`
 3. `terraform/live/eu-west-1/security-groups/flask-backend`
-4. `terraform/live/eu-west-1/ami/amazon-linux-minimal`
-5. `terraform/live/eu-west-1/ec2/flask-backend`
-6. `terraform/live/eu-west-1/ec2/nginx-proxy`
+4. `terraform/live/eu-west-1/ami/amazon-linux2`
+5. `terraform/live/eu-west-1/ami/ubuntu-minimal`
+6. `terraform/live/eu-west-1/ec2/flask-backend`
+7. `terraform/live/eu-west-1/ec2/nginx-proxy`
+8. `terraform/live/eu-west-1/ec2/nat-instance`
 
 Run in each directory:
 ```bash
@@ -65,13 +80,10 @@ terragrunt apply
 ```
 
 ### GitHub Actions Workflow
-On pushes to `main` affecting `app/`, GitHub Actions:
-1. Builds a new AMI with Packer (`build-ami.yml`).
-2. Updates backend instances with the new AMI, ensuring zero downtime.
-3. Configures instances and NGINX using Ansible (`deploy.yml`).
+
+Details to be added 
 
 ## Manual Deployment and Testing
-
 
 ### Step 1: Verify Ansible Inventory
 ```bash
@@ -80,59 +92,32 @@ python inventory_script.py
 ```
 You should get a json output showing  groups of hosts.
 
-### Step 2: Verify SSH Access
-1. Access the NGINX proxy:
+### Step 2: Bootstrap the nat instance, bastion/proxy and the backends
+   ```bash
+   ansible-playbook -i inventory_script.py playbooks/bootstrap_nat.yml -v  
+   ansible-playbook -i inventory_script.py playbooks/bootstrap_backend.yml -v 
+   ansible-playbook -i inventory.yml playbooks/fetch-ssh-key.yml
+   ```
+### Step 3:  Deploy the configurations
+   ```bash
+   ansible-playbook -i inventory_script.py playbooks/site.yml -v  
+   ```
+### Step 4:  Verify everything is working
+
+1. Verify ssh access to the NGINX proxy:
    ```bash
    ssh -i ~/.ssh/flask-demo.pem ubuntu@<nginx-proxy-public-ip>
    ```
-2. From the NGINX proxy, access backend instances (using the private IPs from `inventory.yml`):
-   ```bash
-   ssh -i /home/ubuntu/.ssh/flask-demo.pem ec2-user@<flask-backend-1-private-ip>
-   ssh -i /home/ubuntu/.ssh/flask-demo.pem ec2-user@<flask-backend-2-private-ip>
-   ```
 
-### Step 5: Test Initial Deployment
-1. Generate inventory:
-   ```bash
-   cd ansible
-   python3 inventory_script.py
-   ```
-2. Configure SSH key on NGINX proxy,  bootstrap NAT and the backends:
-   ```bash
-   ansible-playbook -i inventory.yml playbooks/fetch-ssh-key.yml
-   ansible-playbook -i inventory.yml playbooks/bootstrap_nat.yml
-   ansible-playbook -i inventory.yml playbooks/bootstrap_backend.yml
-   ```
-3. Run the playbook:
-   ```bash
-   ansible-playbook -i inventory.yml playbook/site.yml -vv
-   ```
-4. Verify nat and internet connection of backends:
-   ```bash
-   ansible-playbook -i inventory.yml test/verify_nat.yml
-   ansible-playbook -i inventory.yml test/verify_private_internet.yml
-   ansible-playbook -i inventory.yml test/test_backend.yml
-   ```
-5. Verify Flask containers:
+2. Verify Flask containers:
    ```bash
    ssh -i ~/.ssh/flask-demo.pem -J ubuntu@<nginx-proxy-public-ip> ec2-user@<flask-backend-1-private-ip> 'docker ps'
    ssh -i ~/.ssh/flask-demo.pem -J ubuntu@<nginx-proxy-public-ip> ec2-user@<flask-backend-2-private-ip> 'docker ps'
    ```
-6. Verify NGINX configuration:
-   ```bash
-   ssh -i ~/.ssh/flask-demo.pem ubuntu@<nginx-proxy-public-ip> 'sudo cat /etc/nginx/conf.d/flask-backend.conf'
-   ```
-7. Test the application:
+
+3. Test the application:
    ```bash
    curl http://<nginx-proxy-public-ip>
    ```
 
-## Notes
-- **Free Tier**: Uses `t2.micro` instances and `gp3` volumes (16GB for EC2).
-
-## Planned features
-
-* Fully automated tests incorporated into github actions
-* Script to run playbooks in order for local dev environment testing
-* Zero downtime upgrade of flask backend 
-
+There are additional test playbooks under ansible/test

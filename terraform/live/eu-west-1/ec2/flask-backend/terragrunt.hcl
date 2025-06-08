@@ -15,7 +15,7 @@ dependency "flask-sg" {
 }
 
 dependency "ami" {
-  config_path = "../../ami/amazon-linux2/"
+  config_path = "../../ami/ubuntu-minimal/"
   mock_outputs = {
     ami_id = "placeholder-ami-id"
   }

@@ -71,8 +71,8 @@ def main():
         "app_servers": {
             "hosts": app_servers,
             "vars": {
-                "ansible_user": "ec2-user",
-                "ansible_python_interpreter": "/usr/bin/python3.8",  # Set Python 3.8 for app servers
+                "ansible_user": "ubuntu",
+                "ansible_python_interpreter": "/usr/bin/python3",  
                 "ansible_ssh_common_args": (
                     f'-o StrictHostKeyChecking=no '
                     f'-o ProxyCommand="ssh -W %h:%p -q ubuntu@{bastion_hosts[0]}"'

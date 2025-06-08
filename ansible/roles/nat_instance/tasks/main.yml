@@ -1,57 +1,73 @@
 ---
 - name: Detect primary outbound interface
+  command: ip route get 8.8.8.8
+  register: route_info
+  changed_when: false # No change expected
+
+- name: Extract interface name from route info
+  set_fact:
+    outbound_interface: "{{ route_info.stdout.split('dev')[1].split()[0] }}"
+
+- name: Add iptables MASQUERADE rule for outbound traffic if not present
   ansible.builtin.shell: |
-    ip route get 1.1.1.1 | grep -oP 'dev \K\S+' | head -1
-  register: iface
-  changed_when: false
-
-- name: Add iptables MASQUERADE rule for outbound traffic
-  ansible.builtin.command: >
-    iptables -t nat -C POSTROUTING -o {{ iface.stdout }} -j MASQUERADE
-  register: check_nat
-  failed_when: false
-  changed_when: false
-
-- name: Insert MASQUERADE rule if missing
-  ansible.builtin.command: >
-    iptables -t nat -A POSTROUTING -o {{ iface.stdout }} -j MASQUERADE
-  when: check_nat.rc != 0
+    iptables -t nat -C POSTROUTING -o {{ outbound_interface }} -j MASQUERADE 2>/dev/null || \
+    iptables -t nat -A POSTROUTING -o {{ outbound_interface }} -j MASQUERADE
+  register: iptables_rule_check
+  changed_when: iptables_rule_check.rc == 0
 
 - name: Save iptables rules persistently
-  become: true
-  shell: iptables-save > /etc/iptables.rules
+  ansible.builtin.shell: /sbin/iptables-save
+  register: iptables_rules
+  changed_when: true
+
+- name: Write iptables rules to /etc/sysconfig/iptables
+  ansible.builtin.copy:
+    content: "{{ iptables_rules.stdout }}"
+    dest: /etc/sysconfig/iptables
+    owner: root
+    group: root
+    mode: "0600"
+  when: iptables_rule_check.changed
 
 - name: Create systemd service to restore iptables rules at boot
-  become: true
-  template:
-    src: nat-iptables.service.j2
-    dest: /etc/systemd/system/nat-iptables.service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/iptables-restore.service
+    content: |
+      [Unit]
+      Description=Restore iptables rules
+      After=network.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/sbin/iptables-restore /etc/sysconfig/iptables
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
     mode: "0644"
 
-- name: Enable and start NAT iptables restore service
-  become: true
-  systemd:
-    name: nat-iptables
-    enabled: true
-    state: started
+- name: Reload systemd to apply iptables restore service
+  ansible.builtin.systemd:
     daemon_reload: yes
 
-- name: Enable and start nat-iptables service
+- name: Enable and start iptables-restore service
   ansible.builtin.systemd:
-    name: nat-iptables
+    name: iptables-restore.service
     enabled: true
     state: started
 
-- name: Ensure IP forwarding at runtime
-  ansible.builtin.sysctl:
+- name: Ensure IP forwarding is enabled at runtime
+  sysctl:
     name: net.ipv4.ip_forward
     value: "1"
     state: present
-    reload: true
+    sysctl_set: true
+    reload: yes
 
-- name: Ensure IP forwarding on boot
+- name: Ensure IP forwarding is enabled on boot
   ansible.builtin.lineinfile:
     path: /etc/sysctl.conf
     regexp: "^net.ipv4.ip_forward"
     line: "net.ipv4.ip_forward = 1"
-    create: true
