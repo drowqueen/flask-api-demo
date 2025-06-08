@@ -18,14 +18,23 @@
   when: check_nat.rc != 0
 
 - name: Save iptables rules persistently
-  ansible.builtin.command:
-    cmd: iptables-save > /etc/iptables.rules
+  become: true
+  shell: iptables-save > /etc/iptables.rules
 
 - name: Create systemd service to restore iptables rules at boot
-  ansible.builtin.copy:
+  become: true
+  template:
     src: nat-iptables.service.j2
     dest: /etc/systemd/system/nat-iptables.service
     mode: "0644"
+
+- name: Enable and start NAT iptables restore service
+  become: true
+  systemd:
+    name: nat-iptables
+    enabled: true
+    state: started
+    daemon_reload: yes
 
 - name: Enable and start nat-iptables service
   ansible.builtin.systemd:
