@@ -1,0 +1,7 @@
+---
+- name: Restart Docker container for backend
+  community.docker.docker_container:
+    name: flask-app
+    state: restarted
+  become: true
+  become_user: ec2-user

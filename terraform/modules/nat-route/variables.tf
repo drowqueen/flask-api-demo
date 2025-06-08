@@ -1,5 +1,10 @@
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  type        = list(string)
+}
+
 variable "route_table_ids" {
-  description = "List of private route table IDs"
+  description = "List of route table IDs for private subnets"
   type        = list(string)
 }
 
