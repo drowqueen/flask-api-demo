@@ -20,20 +20,4 @@
 
 - name: Ensure the Docker service is started
   service:
-    name: docker
-    state: started
-    enabled: yes
-
-- name: Pull the latest Docker image (e.g., Flask app)
-  docker_image:
-    name: "{{ flask_image }}"
-    source: pull
-
-- name: Run the Flask app container
-  docker_container:
-    name: flask_app
-    image: "{{ flask_image }}"
-    state: started
-    restart_policy: always
-    ports:
-      - "{{ flask_ports }}" # Using flask_ports as a variable
+    name:

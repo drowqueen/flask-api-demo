@@ -1,0 +1,8 @@
+---
+- import_playbook: bootstrap_nat.yml
+- import_playbook: bootstrap_backend.yml
+# Run tests after bootstrap & fetch ssh key
+- import_playbook: fetch_ssh_key.yml
+- import_playbook: verify_nat.yml
+# Deploy the nginx, nat instance and backend configurations and apps
+- import_playbook: site.yml

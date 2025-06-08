@@ -1,7 +1,8 @@
 # File: README.md
 # Flask API Demo with NGINX Reverse Proxy
 
-This project deploys a Flask API with two backend instances (`flask-backend-1` and `flask-backend-2`) behind an NGINX reverse proxy on AWS, using Terraform/Terragrunt, and Ansible for infrastructure and configuration.
+This project deploys a minimalistic Flask API with two backend instances (`flask-backend-1` and `flask-backend-2`) behind an NGINX reverse proxy on AWS,  using Terraform/Terragrunt, and Ansible for infrastructure and configuration.
+Backend instances are in a private subnet and go throught the nat instance to download necessary packages.
 
 ## Notes
 - **Free Tier**: Uses `t2.micro` instances and `gp3` volumes
@@ -55,7 +56,7 @@ This project deploys a Flask API with two backend instances (`flask-backend-1` a
    docker build -t flask-api .
    docker run -p 5001:5001 flask-api
    ```
-2. Test endpoints:
+2. Test the endpoints and the API:
    ```bash
    curl http://localhost:5001
    curl -X POST -H "Content-Type: application/json" -d '{"name":"Laptop","price":999.99}' http://localhost:5001/item/1
@@ -87,22 +88,17 @@ Details to be added
 
 ### Step 1: Verify Ansible Inventory
 ```bash
-cd ../ansible
-python inventory_script.py
+
+ansible/inventory_script.py
 ```
 You should get a json output showing  groups of hosts.
 
-### Step 2: Bootstrap the nat instance, bastion/proxy and the backends
+### Step 2: Bootstrap and deploy the configurations and apps
    ```bash
-   ansible-playbook -i inventory_script.py playbooks/bootstrap_nat.yml -v  
-   ansible-playbook -i inventory_script.py playbooks/bootstrap_backend.yml -v 
-   ansible-playbook -i inventory.yml playbooks/fetch-ssh-key.yml
+   ansible-playbook -i ansible/inventory_script.py ansible/playbooks/deploy_all.yml  
    ```
-### Step 3:  Deploy the configurations
-   ```bash
-   ansible-playbook -i inventory_script.py playbooks/site.yml -v  
-   ```
-### Step 4:  Verify everything is working
+
+### Step 3:  Verify everything is working
 
 1. Verify ssh access to the NGINX proxy:
    ```bash
@@ -119,5 +115,3 @@ You should get a json output showing  groups of hosts.
    ```bash
    curl http://<nginx-proxy-public-ip>
    ```
-
-There are additional test playbooks under ansible/test

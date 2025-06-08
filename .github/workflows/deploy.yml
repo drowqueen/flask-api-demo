@@ -1,14 +1,15 @@
 name: Deploy with Ansible
+
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
+
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ansible
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,7 +25,7 @@ jobs:
           sudo apt-get remove -y containerd containerd.io
           sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg
-          sudo echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          echo "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
           sudo apt-get update -y
           sudo apt-get install -y docker-ce docker-ce-cli containerd.io
 
@@ -42,21 +43,18 @@ jobs:
 
       - name: Install Ansible collections and roles
         run: |
-          # Set the path where Ansible will install collections
           mkdir -p $HOME/.ansible/collections
           export ANSIBLE_GALAXY_COLLECTIONS_PATH=$HOME/.ansible/collections
-          
-          # Install collections
           ansible-galaxy collection install community.docker
           ansible-galaxy install geerlingguy.docker
 
-      - name: Generate inventory
+      - name: Generate dynamic inventory
         env:
           AWS_REGION: eu-west-1
         run: |
-          chmod +x inventory_script.py
-          python3 inventory_script.py > inventory.yml
+          chmod +x ansible/inventory_script.py
+          python3 ansible/inventory_script.py > inventory.yml
           cat inventory.yml
 
-      - name: Run Ansible playbook
-        run: ansible-playbook -i inventory.yml playbook.yml -v
+      - name: Run Ansible master playbook on app_servers
+        run: ansible-playbook -i inventory.yml ansible/playbooks/site.yml --limit app_servers -v

@@ -21,5 +21,7 @@
   vars:
     ansible_user: ubuntu
     ansible_python_interpreter: /usr/bin/python3
+    # Go two levels up from ansible/playbooks to repo root, then to app/
+    app_local_path: "{{ playbook_dir }}/../../app"
   roles:
     - backend

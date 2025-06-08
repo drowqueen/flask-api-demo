@@ -1,67 +1,4 @@
 ---
-- name: Bootstrap NAT instance configuration
-  hosts: gateway_hosts
-  gather_facts: true
-  tasks:
-    - name: Set NAT private IP fact
-      set_fact:
-        nat_instance_private_ip: "{{ ansible_default_ipv4.address }}"
-      delegate_to: localhost
-      run_once: true
-
-    - name: Enable IP forwarding on NAT instance
-      sysctl:
-        name: net.ipv4.ip_forward
-        value: "1"
-        state: present
-
-    - name: Add iptables MASQUERADE rule on NAT instance
-      iptables:
-        table: nat
-        chain: POSTROUTING
-        jump: MASQUERADE
-        out_interface: eth0
-
-    - name: Save iptables rules persistently on NAT instance
-      command: /sbin/iptables-save
-      register: iptables_rules
-
-    - name: Write iptables rules to /etc/sysconfig/iptables
-      copy:
-        content: "{{ iptables_rules.stdout }}"
-        dest: /etc/sysconfig/iptables
-        owner: root
-        group: root
-        mode: "0600"
-
-    - name: Create systemd service to restore iptables rules at boot
-      copy:
-        dest: /etc/systemd/system/iptables-restore.service
-        content: |
-          [Unit]
-          Description=Restore iptables rules
-          After=network.target
-
-          [Service]
-          Type=oneshot
-          ExecStart=/sbin/iptables-restore /etc/sysconfig/iptables
-          RemainAfterExit=yes
-
-          [Install]
-          WantedBy=multi-user.target
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Reload systemd daemon on NAT instance
-      command: systemctl daemon-reload
-
-    - name: Enable and start iptables-restore service on NAT instance
-      systemd:
-        name: iptables-restore.service
-        state: started
-        enabled: true
-
 - name: Configure backend instances for internet access via NAT
   hosts: app_servers
   become: true
@@ -71,7 +8,7 @@
   tasks:
     - name: Get NAT instance private IP from inventory hostvars
       set_fact:
-        nat_instance_ip: "{{ hostvars[groups['gateway_hosts'][0]].ansible_default_ipv4.address }}"
+        nat_instance_ip: "{{ hostvars[groups['gateway_hosts'][0]]['private_ip'] }}"
 
     - name: Check if the instance has a default route
       command: ip route show default
