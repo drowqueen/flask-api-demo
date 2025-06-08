@@ -1,35 +1,27 @@
----
-- name: Distribute SSH public key to bastion
-  hosts: bastion_hosts
-  become: true
-  vars:
-    ssh_user: ubuntu
-    ansible_user: ubuntu
+- name: Fetch SSH key from SSM using lookup plugin
+  hosts: localhost
+  gather_facts: no
   collections:
-    - community.aws
-  tasks:
-    - name: Fetch SSH public key from AWS SSM Parameter Store (locally)
-      community.aws.ssm_parameter:
-        name: /flask-demo/ssh/flask-demo-key
-        decryption: yes
-        region: eu-west-1
-        state: present
-      register: ssh_key
-      delegate_to: localhost
-      run_once: true
+    - amazon.aws
+  become: false
+  vars:
+    ssm_parameter_name: "/flask-demo/ssh/flask-demo-key"
+    region: "eu-west-1"
+    ssh_key_path: "./tmp/flask-demo-key.pem"
 
-    - name: Ensure ~/.ssh directory exists for the SSH user
-      ansible.builtin.file:
-        path: /home/{{ ssh_user }}/.ssh
+  tasks:
+    - file:
+        path: "{{ ssh_key_path | dirname }}"
         state: directory
         mode: "0700"
-        owner: "{{ ssh_user }}"
-        group: "{{ ssh_user }}"
 
-    - name: Write SSH public key to authorized_keys
-      ansible.builtin.copy:
-        content: "{{ ssh_key.parameter.value }}"
-        dest: /home/{{ ssh_user }}/.ssh/authorized_keys
-        owner: "{{ ssh_user }}"
-        group: "{{ ssh_user }}"
+    - set_fact:
+        ssh_private_key: "{{ lookup('amazon.aws.aws_ssm', ssm_parameter_name, region=region, decrypt=true) }}"
+
+    - copy:
+        content: "{{ ssh_private_key }}"
+        dest: "{{ ssh_key_path }}"
         mode: "0600"
+
+    - debug:
+        msg: "SSH key saved to {{ ssh_key_path }}"
