@@ -1,71 +1,25 @@
 ---
-- name: Configure Flask Backend Instances
-  hosts: tag_Name_flask_backend
+- name: Configure Bastion
+  hosts: bastion_hosts
   become: true
-  gather_facts: true
   vars:
-    flask_port: 5001
-    ansible_python_interpreter: /usr/bin/python3.9
-  tasks:
-    - name: Ensure Docker service is started and enabled
-      ansible.builtin.service:
-        name: docker
-        state: started
-        enabled: true
+    ansible_user: ubuntu
+  roles:
+    - nginx
 
-    - name: Apply backend role
-      ansible.builtin.include_role:
-        name: backend
-      vars:
-        flask_port: "{{ flask_port }}"
-
-- name: Configure Nginx Proxy
-  hosts: tag_Name_nginx_proxy
+- name: Configure NAT instance
+  hosts: gateway_hosts
   become: true
-  gather_facts: true
   vars:
-    flask_port: 5001
+    ansible_user: ec2-user
+  roles:
+    - nat_instance
+
+- name: Configure Backend (Flask app servers)
+  hosts: app_servers
+  become: true
+  vars:
+    ansible_user: ec2-user
     ansible_python_interpreter: /usr/bin/python3
-  tasks:
-    - name: Set backend instances
-      ansible.builtin.set_fact:
-        backend_instances: "{{ groups['tag_Name_flask_backend'] | map('extract', hostvars, 'ansible_host') | map('regex_replace', '^(.*)$', '{\"ip\": \"\\1\", \"port\": \"' ~ flask_port ~ '\"}') | map('from_json') | list }}"
-
-    - name: Debug backend_instances
-      ansible.builtin.debug:
-        var: backend_instances
-      when: ansible_debug | default(true) | bool
-
-    - name: Apply nginx role
-      ansible.builtin.include_role:
-        name: nginx
-      vars:
-        active_backends: "{{ backend_instances }}"
-
-    - name: Verify Nginx configuration
-      ansible.builtin.command: nginx -t
-      register: nginx_test
-      changed_when: false
-
-    - name: Debug Nginx configuration test
-      ansible.builtin.debug:
-        msg: "Nginx config test: {{ nginx_test.stderr_lines | default([]) + nginx_test.stdout_lines | default([]) }}"
-      when: ansible_debug | default(true) | bool
-
-    - name: Test connectivity to backends
-      ansible.builtin.command: "curl -v --connect-timeout 5 http://{{ item.ip }}:{{ item.port }}"
-      loop: "{{ backend_instances }}"
-      register: curl_test
-      changed_when: false
-      ignore_errors: true
-
-    - name: Debug connectivity test
-      ansible.builtin.debug:
-        msg: "Curl to {{ item.item.ip }}:{{ item.item.port }}: {{ item.stderr_lines | default([]) + item.stdout_lines | default([]) }}"
-      loop: "{{ curl_test.results }}"
-      when: ansible_debug | default(true) | bool
-
-    - name: Debug configuration
-      ansible.builtin.debug:
-        msg: "Nginx configured to proxy to backends at {{ backend_instances | map(attribute='ip') | join(', ') }}:{{ flask_port }}"
-      when: ansible_debug | default(true) | bool
+  roles:
+    - backend

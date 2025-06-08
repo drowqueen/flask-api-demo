@@ -74,14 +74,7 @@ On pushes to `main` affecting `app/`, GitHub Actions:
 3. Configures instances and NGINX using Ansible (`deploy.yml`).
 
 ## Manual Deployment
-### Environment Setup
-Set environment variables:
-```bash
-export AWS_REGION=eu-west-1
-export ANSIBLE_SSH_KEY_PATH=~/.ssh/flask-demo.pem
-export JUMP_HOST_TAG=nginx-proxy
-export BACKEND_TAG=flask-backend
-```
+
 
 ### Step 1: Build and Store AMI
 1. Build the AMI:
@@ -103,13 +96,12 @@ export BACKEND_TAG=flask-backend
      --region eu-west-1
    ```
 
-### Step 2: Generate Ansible Inventory
+### Step 2: Verify Ansible Inventory
 ```bash
 cd ../ansible
-python3 inventory_script.py
-cat inventory.yml
+python inventory_script.py
 ```
-
+You should get a json output showing  groups of hosts.
 ### Step 3: Verify SSH Access
 1. Access the NGINX proxy:
    ```bash

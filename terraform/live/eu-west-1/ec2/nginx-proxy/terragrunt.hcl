@@ -23,8 +23,8 @@ dependency "ami" {
 
 inputs = {
   name                        = "demo-nginx-proxy"
-  ami_id                      = dependency.ami.outputs.ami_id  # Ubuntu 22.04 AMI
-  ami_ssm_parameter           = null  # Explicitly disable SSM parameter
+  ami_id                      = dependency.ami.outputs.ami_id # Ubuntu 22.04 AMI
+  ami_ssm_parameter           = null                          # Explicitly disable SSM parameter
   instance_type               = "t2.micro"
   iam_instance_profile        = "flask-demo-bastion-role"
   availability_zone           = "eu-west-1a"
@@ -34,8 +34,10 @@ inputs = {
   associate_public_ip_address = true
   instance_count              = 1
   tags = {
-    "Name"  = "nginx-proxy"
-    "Owner" = "terragrunt"
-    "Env"   = "dev"
+    Environment  = "dev"
+    Role         = "nginx-proxy"
+    bastion_host = "true"
+    Name         = "flask-nginx-proxy"
+    Owner        = "terragrunt"
   }
 }

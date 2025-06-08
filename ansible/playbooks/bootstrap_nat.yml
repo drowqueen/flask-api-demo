@@ -1,0 +1,22 @@
+---
+- name: Bootstrap Amazon Linux 2 NAT instance with Python 3.8
+  hosts: gateway_hosts
+  gather_facts: false
+  become: true
+  vars:
+    ansible_user: ec2-user
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Install python 3.8
+      raw: |
+        sudo amazon-linux-extras enable python3.8
+        sudo yum clean metadata
+        sudo yum install -y python3.8
+
+    - name: Verify python3.8 version
+      raw: python3.8 --version
+      register: python38_version
+
+    - name: Show python3.8 version
+      debug:
+        var: python38_version.stdout

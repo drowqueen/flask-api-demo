@@ -26,6 +26,4 @@ secrets.tf
 
 #asdf
 .tool-versions
-
-# Ansible
-inventory.yml  
+ansible.cfg

@@ -1,0 +1,18 @@
+[Unit]
+Description=Flask Backend Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+Restart=always
+RestartSec=10s
+ExecStartPre=-/usr/bin/docker pull flask-app-image:latest
+ExecStart=/usr/bin/docker run --rm --name flask-app -p 5001:5001 flask-app-image:latest
+ExecStop=/usr/bin/docker stop flask-app
+ExecStopPost=/usr/bin/docker rm flask-app
+TimeoutSec=30
+LimitMEMLOCK=infinity
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
