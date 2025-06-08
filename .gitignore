@@ -29,4 +29,4 @@ secrets.tf
 
 #ansible
 ansible.cfg
- playbooks/tmp/
+tmp

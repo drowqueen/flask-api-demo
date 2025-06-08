@@ -43,11 +43,13 @@ Backend instances are in a private subnet and go throught the nat instance to do
 - Listens on port `5001` for NGINX integration.
 
 ### Endpoints
-- `GET /items`: List all items.
+- `GET /items`: Retrieve a JSON object containing all items.
 - `GET /item/<item_id>`: Retrieve an item by ID.
-- `POST /item/<item_id>`: Create an item with `name` and `price`.
-- `PUT /item/<item_id>`: Update or create an item.
+- `POST /item/<item_id>`: Create a new item with the given item_id. Requires JSON body with name (string) and price (float).
+    Fails if the item already exists.
+- `PUT /item/<item_id>`: Update an existing item or create it if it doesn’t exist. Requires JSON body with name and price.
 - `DELETE /item/<item_id>`: Delete an item.
+- `PATCH /item/<item_id>`: Partially update fields of an existing item. Provide JSON body with any subset of name and/or price.
 
 ### Local Testing
 1. Build and test the Flask API:
@@ -59,8 +61,7 @@ Backend instances are in a private subnet and go throught the nat instance to do
 2. Test the endpoints and the API:
    ```bash
    curl http://localhost:5001
-   curl -X POST -H "Content-Type: application/json" -d '{"name":"Laptop","price":999.99}' http://localhost:5001/item/1
-   curl http://localhost:5001/item/1
+   <repo_root>/tests/api-test.sh
    ```
 
 ## Infrastructure Setup
@@ -68,7 +69,9 @@ Backend instances are in a private subnet and go throught the nat instance to do
 Deploy resources in this order to respect dependencies:
 1. `terraform/live/eu-west-1/flask-demo-vpc`
 2. `terraform/live/eu-west-1/security-groups/nginx-proxy`
-3. `terraform/live/eu-west-1/security-groups/flask-backend`
+3. `terraform/live/eu-west-1/security-groups/flask-backend`asdf list jq
+
+
 4. `terraform/live/eu-west-1/ami/amazon-linux2`
 5. `terraform/live/eu-west-1/ami/ubuntu-minimal`
 6. `terraform/live/eu-west-1/ec2/flask-backend`
