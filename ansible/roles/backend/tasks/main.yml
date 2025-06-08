@@ -1,35 +1,39 @@
 ---
-- name: Install required packages
-  ansible.builtin.yum:
+- name: Install required packages (docker)
+  yum:
     name:
       - docker
-      - git
     state: present
-  become: true
+    update_cache: yes
 
-- name: Copy backend application files
-  ansible.builtin.copy:
-    src: ../../app/
-    dest: /opt/flask/
-    owner: ec2-user
-    group: ec2-user
-    mode: "0755"
-  become: true
+- name: Enable and start Docker service
+  service:
+    name: docker
+    state: started
+    enabled: yes
 
-- name: Build Docker image for backend
-  community.docker.docker_image:
-    name: flask-app-image
-    build:
-      path: /opt/flask/
-    state: present
-  become: true
+- name: Add ec2-user to docker group (to allow non-root Docker usage)
+  user:
+    name: ec2-user
+    group: docker
+    append: yes
 
-- name: Start backend Docker container
-  community.docker.docker_container:
-    name: flask-app
-    image: flask-app-image
+- name: Ensure the Docker service is started
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Pull the latest Docker image (e.g., Flask app)
+  docker_image:
+    name: "{{ flask_image }}"
+    source: pull
+
+- name: Run the Flask app container
+  docker_container:
+    name: flask_app
+    image: "{{ flask_image }}"
     state: started
     restart_policy: always
-    published_ports:
-      - "5001:5001"
-  become: true
+    ports:
+      - "{{ flask_ports }}" # Using flask_ports as a variable
