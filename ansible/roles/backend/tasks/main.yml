@@ -1,63 +1,35 @@
 ---
 - name: Install required packages
-  ansible.builtin.apt:
+  ansible.builtin.yum:
     name:
-      - python3-pip
-      - python3-venv
+      - docker
+      - git
     state: present
-    update_cache: true
-  become: true
-
-- name: Create application directory
-  ansible.builtin.file:
-    path: /opt/backend
-    state: directory
-    owner: ubuntu
-    group: ubuntu
-    mode: "0755"
   become: true
 
 - name: Copy backend application files
   ansible.builtin.copy:
-    src: ../../backend/
-    dest: /opt/backend/
-    owner: ubuntu
-    group: ubuntu
+    src: ../../app/
+    dest: /opt/flask/
+    owner: ec2-user
+    group: ec2-user
     mode: "0755"
   become: true
 
-- name: Create Python virtual environment
-  ansible.builtin.command:
-    cmd: python3 -m venv /opt/backend/venv
-  args:
-    creates: /opt/backend/venv/bin/activate
-  become: true
-  become_user: ubuntu
-
-- name: Install Python requirements
-  ansible.builtin.pip:
-    requirements: /opt/backend/requirements.txt
-    virtualenv: /opt/backend/venv
-    virtualenv_command: python3 -m venv
-    virtualenv_python: python3
-  become: true
-  become_user: ubuntu
-
-- name: Configure systemd service for backend
-  ansible.builtin.template:
-    src: backend.service.j2
-    dest: /etc/systemd/system/backend.service
-    mode: "0644"
+- name: Build Docker image for backend
+  community.docker.docker_image:
+    name: flask-app-image
+    build:
+      path: /opt/flask/
+    state: present
   become: true
 
-- name: Reload systemd to apply backend service
-  ansible.builtin.systemd:
-    daemon_reload: yes
-  become: true
-
-- name: Ensure backend service is started and enabled
-  ansible.builtin.systemd:
-    name: backend
+- name: Start backend Docker container
+  community.docker.docker_container:
+    name: flask-app
+    image: flask-app-image
     state: started
-    enabled: yes
+    restart_policy: always
+    published_ports:
+      - "5001:5001"
   become: true

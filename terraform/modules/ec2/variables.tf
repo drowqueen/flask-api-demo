@@ -3,14 +3,9 @@ variable "name" {
   type        = string
   default     = "ec2-instance"
 }
-variable "ami_ssm_parameter" {
-  description = "SSM parameter name for the AMI ID (optional)"
-  type        = string
-  default     = null
-}
 
 variable "ami_id" {
-  description = "Direct AMI ID to use if SSM parameter is not provided (optional)"
+  description = "AMI id to use"
   type        = string
   default     = null
 }
