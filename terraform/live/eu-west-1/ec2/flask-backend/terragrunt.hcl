@@ -31,11 +31,6 @@ inputs = {
   key_name                    = "flask-demo"
   associate_public_ip_address = false
   instance_count              = 2
-  root_block_device = [{
-    volume_size           = 16
-    volume_type           = "gp3"
-    delete_on_termination = true
-  }]
   tags = {
     Environment    = "dev"
     Role           = "flask-backend"
