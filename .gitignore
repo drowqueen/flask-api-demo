@@ -26,3 +26,4 @@ secrets.tf
 
 #asdf
 .tool-versions
+ansible.cfg

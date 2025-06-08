@@ -2,86 +2,85 @@
 
 import boto3
 import json
+import os
+import sys
+import tempfile
 
-def get_instances_by_tag(ec2, filters):
-    return ec2.instances.filter(Filters=filters)
+def get_ssh_key_from_ssm(region, parameter_name):
+    ssm = boto3.client("ssm", region_name=region)
+    response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+    return response["Parameter"]["Value"]
+
+def save_ssh_key_to_tempfile(key_content):
+    tf = tempfile.NamedTemporaryFile(delete=False, mode="w")
+    tf.write(key_content)
+    tf.close()
+    os.chmod(tf.name, 0o600)
+    return tf.name
+
+def get_instances_by_tag(region, tag_key):
+    ec2 = boto3.client("ec2", region_name=region)
+    filters = [
+        {"Name": f"tag:{tag_key}", "Values": ["true"]},
+        {"Name": "instance-state-name", "Values": ["running"]},
+    ]
+    response = ec2.describe_instances(Filters=filters)
+    instances = []
+    for reservation in response["Reservations"]:
+        for instance in reservation["Instances"]:
+            # Return private IP for app_servers, public IP for others
+            if tag_key == "app_servers":
+                instances.append(instance.get("PrivateIpAddress"))
+            else:
+                instances.append(instance.get("PublicIpAddress"))
+    return [i for i in instances if i]
 
 def main():
-    ec2 = boto3.resource("ec2", region_name="eu-west-1")
+    region = os.environ.get("AWS_REGION", "eu-west-1")
+    ssm_param = "/flask-demo/ssh/flask-demo-key"
 
-    bastion_ips = []
-    gateway_ips = []
-    app_private_ips = []
+    # Fetch the SSH private key from SSM and save it to a temp file
+    ssh_key_content = get_ssh_key_from_ssm(region, ssm_param)
+    ssh_key_path = save_ssh_key_to_tempfile(ssh_key_content)
+
+    bastion_hosts = get_instances_by_tag(region, "bastion_host")
+    gateway_hosts = get_instances_by_tag(region, "gateway_hosts")
+    app_servers = get_instances_by_tag(region, "app_servers")
+
+    if not bastion_hosts:
+        print("No bastion host found. Exiting.", file=sys.stderr)
+        sys.exit(1)
 
     inventory = {
-        "gateway_hosts": {"hosts": [], "vars": {}},
-        "bastion_hosts": {"hosts": [], "vars": {}},
-        "app_servers": {"hosts": [], "vars": {}},
-        "_meta": {"hostvars": {}}
-    }
-
-    # NAT instances (gateway_hosts)
-    nat_instances = get_instances_by_tag(ec2, [
-        {"Name": "tag:Role", "Values": ["flask-nat"]},
-        {"Name": "tag:gateway_hosts", "Values": ["true"]},
-        {"Name": "instance-state-name", "Values": ["running"]}
-    ])
-    for inst in nat_instances:
-        if inst.public_ip_address:
-            gateway_ips.append(inst.public_ip_address)
-
-    # Bastion hosts (nginx proxy)
-    bastion_instances = get_instances_by_tag(ec2, [
-        {"Name": "tag:bastion_host", "Values": ["true"]},
-        {"Name": "instance-state-name", "Values": ["running"]}
-    ])
-    for inst in bastion_instances:
-        if inst.public_ip_address:
-            bastion_ips.append(inst.public_ip_address)
-        if inst.private_ip_address:
-            app_private_ips.append(inst.private_ip_address)
-
-    # Backend app servers
-    backend_instances = get_instances_by_tag(ec2, [
-        {"Name": "tag:Role", "Values": ["flask-backend"]},
-        {"Name": "tag:app_servers", "Values": ["true"]},
-        {"Name": "instance-state-name", "Values": ["running"]}
-    ])
-    for inst in backend_instances:
-        if inst.private_ip_address:
-            app_private_ips.append(inst.private_ip_address)
-
-    # Assign hosts to inventory groups
-    inventory["gateway_hosts"]["hosts"] = gateway_ips
-    inventory["bastion_hosts"]["hosts"] = bastion_ips
-    inventory["app_servers"]["hosts"] = app_private_ips
-
-    ssh_key_path = "~/.ssh/flask-demo.pem"
-
-    # Both gateway and bastion use ec2-user
-    inventory["gateway_hosts"]["vars"] = {
-        "ansible_user": "ec2-user",
-        "ansible_ssh_private_key_file": ssh_key_path
-    }
-    inventory["bastion_hosts"]["vars"] = {
-        "ansible_user": "ec2-user",
-        "ansible_ssh_private_key_file": ssh_key_path
-    }
-
-    # app_servers use bastion as jump host with explicit ProxyCommand user=ec2-user and StrictHostKeyChecking=no
-    if bastion_ips:
-        bastion_ip = bastion_ips[0]
-        proxy_cmd = (
-            f"-o StrictHostKeyChecking=no "
-            f"-o ProxyCommand=\"ssh -W %h:%p -q -i {ssh_key_path} ec2-user@{bastion_ip}\""
-        )
-    else:
-        proxy_cmd = ""
-
-    inventory["app_servers"]["vars"] = {
-        "ansible_user": "ubuntu",
-        "ansible_ssh_private_key_file": ssh_key_path,
-        "ansible_ssh_common_args": proxy_cmd
+        "bastion_hosts": {
+            "hosts": bastion_hosts,
+            "vars": {
+                "ansible_user": "ubuntu",
+                "ansible_python_interpreter": "/usr/bin/python3",
+                # Key is fetched and saved, but we rely on the SSH agent instead of specifying -i
+            },
+        },
+        "gateway_hosts": {
+            "hosts": gateway_hosts,
+            "vars": {
+                "ansible_user": "ec2-user",
+                "ansible_python_interpreter": "/usr/bin/python3.8",
+                # Key is fetched and saved, but agent forwarding will be used
+            },
+        },
+        "app_servers": {
+            "hosts": app_servers,
+            "vars": {
+                "ansible_user": "ec2-user",
+                "ansible_python_interpreter": "/usr/bin/python3.8",
+                "ansible_ssh_common_args": (
+                    f'-o StrictHostKeyChecking=no '
+                    f'-o ProxyCommand="ssh -W %h:%p -q ubuntu@{bastion_hosts[0]}"'
+                ),
+                # No ansible_ssh_private_key_file here; SSH agent must hold the key
+            },
+        },
+        "_meta": {"hostvars": {}},
     }
 
     print(json.dumps(inventory, indent=2))
