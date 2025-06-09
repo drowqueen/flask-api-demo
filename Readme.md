@@ -84,7 +84,21 @@ terragrunt apply
 
 ### GitHub Actions Workflow
 
-Details to be added 
+A GitHub Actions workflow runs on push and pull request events and performs the following steps:
+
+Checks out the repository.
+
+Sets up Python 3.9 environment.
+
+Installs dependencies including pytest and requests.
+
+Runs the unit tests (pytest tests/test_app.py).
+
+Optionally, builds and tests the Docker image.
+
+Reports test results and fails the workflow if any tests fail.
+
+This ensures continuous integration and automated validation of the Flask backend code before deployment.
 
 ## Manual Deployment and Testing
 
