@@ -10,7 +10,6 @@ Backend instances are in a private subnet and go throught the nat instance to do
 ## Planned features
 
 * Fully automated tests incorporated into github actions
-* Script to run playbooks in order for local dev environment testing
 * Zero downtime upgrade of flask backend 
 * Terraform definitions for the custom route and routing table associations from nat to private subnets
 
