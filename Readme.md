@@ -1,5 +1,5 @@
 # File: README.md
-# Flask API Demo with NGINX Reverse Proxy
+# Ansible and Terragrunt Demo with a Simple RESTful API Backend, NAT instance and NGINX Reverse Proxy
 
 This project deploys a minimalistic Flask API with two backend instances (`flask-backend-1` and `flask-backend-2`) behind an NGINX reverse proxy on AWS,  using Terraform/Terragrunt, and Ansible for infrastructure and configuration.
 Backend instances are in a private subnet and go throught the nat instance to download necessary packages.
