@@ -18,7 +18,7 @@ class Item(Resource):
     def get(self, item_id):
         if item_id not in items:
             abort(404, message=f"Item {item_id} not found")
-        return items[item_id]  # Return dict, no jsonify
+        return items[item_id]  # Return dict
 
     def post(self, item_id):
         if item_id in items:
