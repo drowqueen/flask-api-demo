@@ -60,12 +60,10 @@ jobs:
 
           echo "Using base SHA: $BASE_SHA"
 
-          # Find changed .tf/.hcl files under terraform/
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
           DIRS=""
           for file in $CHANGED_FILES; do
             d=$(dirname "$file")
-            # Walk up folders until we find a terragrunt.hcl or root terraform dir
             while [ "$d" != "terraform" ] && [ "$d" != "." ]; do
               if [ -f "$d/terragrunt.hcl" ]; then
                 DIRS="$DIRS $d"
@@ -75,10 +73,11 @@ jobs:
             done
           done
 
-          # Remove duplicates and exclude terraform/live root explicitly (no terragrunt.hcl there)
           DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
 
-          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+          echo "dirs<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DIRS" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Debug Terragrunt remote state key
         if: steps.changed-dirs.outputs.dirs != ''
