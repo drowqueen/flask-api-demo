@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Ensure full history for accurate git diff
 
       - uses: ./.github/actions/aws-setup
         with:
@@ -42,10 +44,18 @@ jobs:
       - name: Find changed terragrunt directories
         id: changed-dirs
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref || 'main' }} --depth=1 || true
-          # Find changed files under terraform/
-          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha || 'origin/main' }} HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
-          # Only keep directories containing a terragrunt.hcl
+          # Determine base SHA for diff depending on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA=$(git rev-parse HEAD^)
+          fi
+          echo "Using base SHA: $BASE_SHA"
+          echo "Recent commits:"
+          git log --oneline -n 5
+          echo "Changed files:"
+          git diff --name-only $BASE_SHA HEAD
+          CHANGED=$(git diff --name-only $BASE_SHA HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
           DIRS=""
           for d in $CHANGED; do
             if [ -f "$d/terragrunt.hcl" ]; then
