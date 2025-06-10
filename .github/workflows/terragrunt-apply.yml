@@ -1,15 +1,6 @@
 name: Terragrunt Apply
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '**/*.tf'
-      - '**/*.hcl'
-      - '.github/workflows/terragrunt-apply.yml'
-      - 'terraform/**/main.tf'
-      - 'terraform/**/terragrunt.hcl'
   pull_request:
     types:
       - closed
@@ -25,7 +16,7 @@ on:
 jobs:
   terragrunt-apply:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true || github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true
     steps:
       - name: Checkout repo with full history
         uses: actions/checkout@v4
@@ -54,19 +45,8 @@ jobs:
         shell: bash
         run: |
           set -e
-
-          # Fetch main branch to get up-to-date refs
           git fetch origin main
-
-          # Determine base SHA for diff:
-          # For PR merge events, use the merge commit's parent 1 (main branch before merge)
-          # For push events, use merge-base between HEAD and origin/main
-
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_SHA=$(git rev-parse HEAD^1)
-          else
-            BASE_SHA=$(git merge-base HEAD origin/main)
-          fi
+          BASE_SHA=$(git rev-parse HEAD^1)
 
           echo "Base commit for diff: $BASE_SHA"
 
