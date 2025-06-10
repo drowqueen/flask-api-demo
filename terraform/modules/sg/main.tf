@@ -1,7 +1,7 @@
 module "security-group" {
   source                   = "terraform-aws-modules/security-group/aws"
   name                     = var.name
-  use_name_prefix          = false
+  use_name_prefix          = true
   vpc_id                   = var.vpc_id
   ingress_cidr_blocks      = var.ingress_cidr_blocks
   ingress_with_cidr_blocks = var.ingress_with_cidr_blocks
