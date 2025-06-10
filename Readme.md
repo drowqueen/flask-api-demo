@@ -11,7 +11,6 @@ Backend instances are in a private subnet and go throught the nat instance to do
 
 * Fully automated tests incorporated into github actions
 * Zero downtime upgrade of flask backend 
-* Terraform definitions for the custom route and routing table associations from nat to private subnets
 
 
 ## Folder Structure
@@ -71,11 +70,11 @@ Deploy resources in this order to respect dependencies:
 1. `terraform/live/eu-west-1/flask-demo-vpc`
 2. `terraform/live/eu-west-1/security-groups/nginx-proxy`
 3. `terraform/live/eu-west-1/security-groups/flask-backend`
-4. `terraform/live/eu-west-1/ami/amazon-linux2`
-5. `terraform/live/eu-west-1/ami/ubuntu-minimal`
-6. `terraform/live/eu-west-1/ec2/flask-backend`
-7. `terraform/live/eu-west-1/ec2/nginx-proxy`
-8. `terraform/live/eu-west-1/ec2/nat-instance`
+4. `terraform/live/eu-west-1/iam/*`
+5. `terraform/live/eu-west-1/ec2/flask-backend`
+6. `terraform/live/eu-west-1/ec2/nginx-proxy`
+7. `terraform/live/eu-west-1/ec2/nat-instance`
+8. `terraform/live/eu-west-1/ec2/nat-route`
 
 Run in each directory:
 ```bash
