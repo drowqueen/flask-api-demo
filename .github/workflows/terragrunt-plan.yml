@@ -2,6 +2,9 @@ name: Terragrunt Plan
 
 on:
   push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
     paths:
       - '**/*.tf'
       - '**/*.hcl'
@@ -23,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full history for accurate git diff
+          fetch-depth: 0
 
       - uses: ./.github/actions/aws-setup
         with:
@@ -61,8 +64,12 @@ jobs:
           echo "Using base SHA: $BASE_SHA"
 
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
+          MODULES_CHANGED=$(echo "$CHANGED_FILES" | grep '^terraform/modules/' || true)
+          TERRAGRUNT_CHANGED=$(echo "$CHANGED_FILES" | grep -v '^terraform/modules/' || true)
+
+          # Start with changed terragrunt.hcl-containing directories
           DIRS=""
-          for file in $CHANGED_FILES; do
+          for file in $TERRAGRUNT_CHANGED; do
             d=$(dirname "$file")
             while [ "$d" != "terraform" ] && [ "$d" != "." ]; do
               if [ -f "$d/terragrunt.hcl" ]; then
@@ -73,16 +80,31 @@ jobs:
             done
           done
 
-          DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
+          # If modules changed, find stacks that reference those modules
+          if [ -n "$MODULES_CHANGED" ]; then
+            echo "Detected module changes, scanning all terragrunt.hcl files"
+            ALL_TG_DIRS=$(find terraform -type f -name terragrunt.hcl -exec dirname {} \;)
+            for tgdir in $ALL_TG_DIRS; do
+              for module_file in $MODULES_CHANGED; do
+                module_name=$(basename "$(dirname "$module_file")")
+                if grep -q "\.\.//modules/$module_name" "$tgdir/terragrunt.hcl"; then
+                  DIRS="$DIRS $tgdir"
+                  break
+                fi
+              done
+            done
+          fi
+
+          DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u)
 
           echo "dirs<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$DIRS" | tr ' ' '\n' >> "$GITHUB_OUTPUT"
+          echo "$DIRS" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Debug Terragrunt remote state key
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          IFS=$'\n' read -r -d '' -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "==== $d ===="
             cd "$d"
@@ -95,7 +117,7 @@ jobs:
       - name: Terragrunt plan in changed directories
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          IFS=$'\n' read -r -d '' -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "Running terragrunt plan in $d"
             (cd "$d" && terragrunt init && terragrunt plan)
