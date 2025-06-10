@@ -3,6 +3,9 @@ description: Setup Python, install Ansible, AWS CLI, dependencies, and prepare i
 runs:
   using: "composite"
   steps:
+    - name: AWS Credentials Setup
+      uses: ./aws.yml
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -21,13 +24,6 @@ runs:
           ansible-galaxy install -r ansible/requirements.yml --force
         fi
       shell: bash
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_DEFAULT_REGION || 'eu-west-1' }}
 
     - name: Prepare dynamic inventory
       run: |

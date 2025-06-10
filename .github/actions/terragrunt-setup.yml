@@ -3,6 +3,9 @@ description: "Install Terraform and Terragrunt"
 runs:
   using: "composite"
   steps:
+    - name: AWS Credentials Setup
+      uses: ./aws.yml
+
     - name: Set up Terraform
       uses: hashicorp/setup-terraform@v3
       with:
