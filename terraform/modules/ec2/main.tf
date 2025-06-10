@@ -1,3 +1,12 @@
+locals {
+  dynamic_instance_tags = {
+    for idx in range(var.instance_count) :
+    tostring(idx) => {
+      Name = "${var.name}-${idx + 1}"
+    }
+  }
+}
+
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "5.7.1"

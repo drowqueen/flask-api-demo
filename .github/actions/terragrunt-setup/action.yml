@@ -1,0 +1,22 @@
+name: Terragrunt/Terraform Setup
+description: Install Terraform and Terragrunt for CI workflows
+runs:
+  using: "composite"
+  steps:
+    - name: Install Terraform
+      shell: bash
+      run: |
+        TF_VERSION=1.7.5
+        curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+        unzip -o -q terraform.zip
+        sudo mv terraform /usr/local/bin/
+        terraform -version
+
+    - name: Install Terragrunt
+      shell: bash
+      run: |
+        TG_VERSION=0.58.14
+        curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+        chmod +x terragrunt
+        sudo mv terragrunt /usr/local/bin/terragrunt
+        terragrunt --version
