@@ -118,5 +118,9 @@ jobs:
           IFS=$'\n' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "Running terragrunt plan in $d"
-            (cd "$d" && terragrunt init && terragrunt plan)
+            (
+              cd "$d"
+              terragrunt init --terragrunt-non-interactive --terragrunt-include-external-dependencies
+              terragrunt plan --terragrunt-non-interactive --terragrunt-include-external-dependencies --terragrunt-log-level debug
+            )
           done
