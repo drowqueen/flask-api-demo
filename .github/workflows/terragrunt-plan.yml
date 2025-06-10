@@ -36,6 +36,7 @@ jobs:
       - uses: ./.github/actions/terragrunt-setup
 
       - name: Debug cache directory
+        if: false
         run: |
           if [ -d "terraform/.terragrunt-cache" ]; then
             echo "Cache directory terraform/.terragrunt-cache exists:"
@@ -106,7 +107,7 @@ jobs:
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
 
       - name: Debug Terragrunt remote state key
-        if: steps.changed-dirs.outputs.dirs != ''
+        if: false
         run: |
           IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do

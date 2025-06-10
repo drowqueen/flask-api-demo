@@ -1,7 +1,8 @@
 name: Terragrunt Apply
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
     paths:
@@ -14,6 +15,7 @@ on:
 
 jobs:
   terragrunt-apply:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,23 +38,23 @@ jobs:
             ${{ runner.os }}-terragrunt-
 
       - name: Find changed terragrunt directories
-        id: dirs-to-apply
+        id: changed-dirs
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_SHA=$(git rev-parse HEAD^)
-          fi
-
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
           echo "Using base SHA: $BASE_SHA"
 
-          # Find changed .tf and .hcl files under terraform/
+          # Get all changed terraform .tf and .hcl files
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
 
+          # Separate module changes and other changes
+          MODULE_CHANGED_FILES=$(echo "$CHANGED_FILES" | grep '^terraform/modules/' || true)
+          TERRAGRUNT_CHANGED_FILES=$(echo "$CHANGED_FILES" | grep -v '^terraform/modules/' || true)
+
           DIRS=""
-          for file in $CHANGED_FILES; do
+
+          # Add stacks directly changed outside modules
+          for file in $TERRAGRUNT_CHANGED_FILES; do
             d=$(dirname "$file")
-            # Walk up folders until we find a terragrunt.hcl or reach root terraform dir
             while [ "$d" != "terraform" ] && [ "$d" != "." ]; do
               if [ -f "$d/terragrunt.hcl" ]; then
                 DIRS="$DIRS $d"
@@ -62,29 +64,45 @@ jobs:
             done
           done
 
-          # Remove duplicates and exclude terraform/live root explicitly
-          DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
+          # Add stacks referencing changed modules
+          if [ -n "$MODULE_CHANGED_FILES" ]; then
+            MODULE_NAMES=$(echo "$MODULE_CHANGED_FILES" | awk -F/ '{print $3}' | sort -u)
+
+            ALL_TG_DIRS=$(find terraform -type f -name terragrunt.hcl -exec dirname {} \;)
+
+            for tgdir in $ALL_TG_DIRS; do
+              for module_name in $MODULE_NAMES; do
+                if grep -q "\.\.//modules/$module_name" "$tgdir/terragrunt.hcl"; then
+                  DIRS="$DIRS $tgdir"
+                  break
+                fi
+              done
+            done
+          fi
+
+          # Remove duplicates and trim whitespace
+          DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
 
       - name: Debug Terragrunt directories to apply
-        if: steps.dirs-to-apply.outputs.dirs != ''
+        if: false
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-apply.outputs.dirs }}"
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           echo "Terragrunt will apply these directories:"
           for d in "${dirs[@]}"; do
             echo "  - $d"
           done
 
       - name: Terragrunt apply in changed directories
-        if: steps.dirs-to-apply.outputs.dirs != ''
+        if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-apply.outputs.dirs }}"
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             if [ ! -f "$d/terragrunt.hcl" ]; then
               echo "Skipping $d because terragrunt.hcl not found"
               continue
             fi
             echo "==> Running terragrunt apply in $d"
-            (cd "$d" && terragrunt init && terragrunt apply -auto-approve)
+            (cd "$d" && terragrunt init --terragrunt-non-interactive && terragrunt apply -auto-approve --terragrunt-non-interactive)
           done
