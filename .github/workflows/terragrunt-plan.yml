@@ -23,13 +23,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-west-1
 
-      - name: Install Terragrunt
-        run: |
-          TG_VERSION=0.58.14
-          wget -qO- https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64 > terragrunt
-          chmod +x terragrunt
-          sudo mv terragrunt /usr/local/bin/terragrunt
-          terragrunt --version
+      - uses: ./.github/actions/terragrunt-setup
 
       - name: Cache Terragrunt cache
         uses: actions/cache@v4
