@@ -6,15 +6,19 @@ on:
       - '**/*.tf'
       - '**/*.hcl'
       - '.github/workflows/terragrunt-plan.yml'
+      - 'terraform/**/main.tf'
+      - 'terraform/**/terragrunt.hcl'
   pull_request:
     paths:
       - '**/*.tf'
       - '**/*.hcl'
       - '.github/workflows/terragrunt-plan.yml'
+      - 'terraform/**/main.tf'
+      - 'terraform/**/terragrunt.hcl'
   workflow_dispatch:
 
 jobs:
-  terragrunt-plan-vpc:
+  terragrunt-plan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,10 +43,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Terragrunt Init (VPC)
-        working-directory: terraform/live/eu-west-1/flask-demo-vpc
-        run: terragrunt init
+      - name: Find changed terragrunt directories
+        id: changed-dirs
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref || 'main' }} --depth=1 || true
+          # Find changed files under terraform/
+          CHANGED=$(git diff --name-only ${{ github.event.pull_request.base.sha || 'origin/main' }} HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
+          # Only keep directories containing a terragrunt.hcl
+          DIRS=""
+          for d in $CHANGED; do
+            if [ -f "$d/terragrunt.hcl" ]; then
+              DIRS="$DIRS $d"
+            fi
+          done
+          echo "dirs=$DIRS" >> $GITHUB_OUTPUT
 
-      - name: Terragrunt Plan (VPC)
-        working-directory: terraform/live/eu-west-1/flask-demo-vpc
-        run: terragrunt plan
+      - name: Terragrunt plan in changed directories
+        if: steps.changed-dirs.outputs.dirs != ''
+        run: |
+          for d in ${{ steps.changed-dirs.outputs.dirs }}; do
+            echo "Running terragrunt plan in $d"
+            (cd $d && terragrunt init && terragrunt plan)
+          done

@@ -8,6 +8,7 @@ on:
       - '**/*.tf'
       - '**/*.hcl'
       - '.github/workflows/terragrunt-apply.yml'
+      - 'terraform/modules/**/main.tf'
   workflow_dispatch:
 
 jobs:
