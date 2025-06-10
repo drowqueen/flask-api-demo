@@ -22,7 +22,7 @@ dependency "ami" {
 }
 
 locals {
-  instance_count = 3
+  instance_count = 2
 }
 
 inputs = {

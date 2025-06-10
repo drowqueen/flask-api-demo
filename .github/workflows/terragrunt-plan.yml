@@ -67,7 +67,6 @@ jobs:
           MODULES_CHANGED=$(echo "$CHANGED_FILES" | grep '^terraform/modules/' || true)
           TERRAGRUNT_CHANGED=$(echo "$CHANGED_FILES" | grep -v '^terraform/modules/' || true)
 
-          # Start with changed terragrunt.hcl-containing directories
           DIRS=""
           for file in $TERRAGRUNT_CHANGED; do
             d=$(dirname "$file")
@@ -80,7 +79,6 @@ jobs:
             done
           done
 
-          # If modules changed, find stacks that reference those modules
           if [ -n "$MODULES_CHANGED" ]; then
             echo "Detected module changes, scanning all terragrunt.hcl files"
             ALL_TG_DIRS=$(find terraform -type f -name terragrunt.hcl -exec dirname {} \;)
@@ -104,7 +102,7 @@ jobs:
       - name: Debug Terragrunt remote state key
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=$'\n' read -r -d '' -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          IFS=$'\n' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "==== $d ===="
             cd "$d"
@@ -117,7 +115,7 @@ jobs:
       - name: Terragrunt plan in changed directories
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=$'\n' read -r -d '' -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          IFS=$'\n' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "Running terragrunt plan in $d"
             (cd "$d" && terragrunt init && terragrunt plan)
