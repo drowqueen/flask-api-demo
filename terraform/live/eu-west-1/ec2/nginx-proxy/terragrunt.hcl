@@ -22,7 +22,7 @@ dependency "ami" {
 }
 
 inputs = {
-  name                        = "nginx-proxy"
+  name                        = "nginx-proxy-bastion"
   ami_id                      = dependency.ami.outputs.ami_id # Ubuntu 22.04 AMI
   instance_type               = "t2.micro"
   iam_instance_profile        = "flask-demo-bastion-role"
@@ -35,7 +35,7 @@ inputs = {
   tags = {
     Environment  = "dev"
     bastion_host = "true"
-    Name         = "nginx-proxy"
+    Name         = "nginx-proxy-bastion"
     Owner        = "terragrunt"
   }
 }
