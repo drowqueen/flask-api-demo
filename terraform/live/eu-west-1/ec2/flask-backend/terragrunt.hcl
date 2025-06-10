@@ -22,7 +22,7 @@ dependency "ami" {
 }
 
 locals {
-  instance_count = 1
+  instance_count = 2
 }
 
 inputs = {
@@ -37,7 +37,6 @@ inputs = {
   instance_count              = local.instance_count
   tags = {
     Environment    = "dev"
-    Role           = "backend"
     app_servers    = "true"
     Owner          = "terragrunt"
   }
