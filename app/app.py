@@ -61,6 +61,42 @@ class ItemList(Resource):
     def get(self):
         return items  # Return dict of all items
 
+class BulkItemUpload(Resource):
+    def post(self):
+        data = request.get_json(force=True)
+
+        # ✅ Accept dictionary with "items" key
+        if not data or "items" not in data or not isinstance(data["items"], list):
+            abort(400, message="Expected JSON with 'items' key containing a list")
+
+        items_list = data["items"]
+
+        created = {}
+        errors = {}
+        next_id = max(items.keys(), default=0) + 1
+
+        for entry in items_list:
+            name = entry.get("name")
+            price = entry.get("price")
+
+            if not isinstance(name, str):
+                errors[f"invalid_name_{next_id}"] = "Name must be a string"
+                continue
+
+            if not isinstance(price, (int, float)):
+                errors[f"invalid_price_{next_id}"] = "Price must be a number"
+                continue
+
+            items[next_id] = {"name": name, "price": price}
+            created[next_id] = items[next_id]
+            next_id += 1
+
+        return {
+            "created": created,
+            "errors": errors
+        }, 201
+
+api.add_resource(BulkItemUpload, "/items/bulk")
 api.add_resource(Item, "/item/<int:item_id>")
 api.add_resource(ItemList, "/items")
 

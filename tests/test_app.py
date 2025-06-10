@@ -48,3 +48,35 @@ def test_delete_item(client):
     # Confirm deletion
     response = client.get("/item/4")
     assert response.status_code == 404
+
+def test_bulk_add_items(client):
+    bulk_data = {
+        "items": [
+            {"name": "Bulk Item 1", "price": 100.0},
+            {"name": "Bulk Item 2", "price": 200.5},
+            {"name": "Bulk Item 3", "price": 300.75}
+        ]
+    }
+
+    response = client.post("/items/bulk", json=bulk_data)
+    assert response.status_code == 201
+
+    returned_items = response.json
+    assert isinstance(returned_items, dict)
+
+    created = returned_items.get("created", {})
+    errors = returned_items.get("errors", {})
+
+    assert len(created) == 3
+    assert len(errors) == 0
+
+    # Check that each item has a numeric id and matches input data
+    for item_id, item in created.items():
+        assert isinstance(int(item_id), int)
+        assert "name" in item and "price" in item
+
+    # Optionally, GET one of the added items by ID to confirm
+    first_id = list(created.keys())[0]
+    get_response = client.get(f"/item/{first_id}")
+    assert get_response.status_code == 200
+    assert get_response.json == created[first_id]
