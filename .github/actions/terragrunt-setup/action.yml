@@ -1,46 +1,36 @@
-name: Terragrunt/Terraform Setup
-description: Install Terraform and Terragrunt for CI workflows
-runs:
-  using: "composite"
-  steps:
-    - name: Ensure Terraform is installed at correct version
-      shell: bash
-      run: |
-        TF_VERSION=1.7.5
-        # Check if terraform is already installed and at the correct version (check both common locations)
-        if command -v terraform >/dev/null 2>&1 && [ "$(terraform version -json | grep -o '"terraform_version": *"[^"]*"' | cut -d'"' -f4)" = "$TF_VERSION" ]; then
-          echo "Terraform $TF_VERSION already installed."
-        elif [ -x /usr/local/bin/terraform/terraform ] && [ "$(/usr/local/bin/terraform/terraform version -json | grep -o '"terraform_version": *"[^"]*"' | cut -d'"' -f4)" = "$TF_VERSION" ]; then
-          echo "Terraform $TF_VERSION already installed in /usr/local/bin/terraform/terraform."
-        else
-          echo "Installing Terraform $TF_VERSION..."
-          curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
-          rm -f terraform
-          unzip -o -q terraform.zip
-          if [ -d /usr/local/bin/terraform ]; then
-            sudo mv -f terraform /usr/local/bin/terraform/terraform
-          else
-            sudo mv -f terraform /usr/local/bin/terraform
-          fi
-        fi
-        # Print version from both possible locations
-        if [ -x /usr/local/bin/terraform/terraform ]; then
-          /usr/local/bin/terraform/terraform -version
-        else
-          terraform -version
-        fi
+name: Terragrunt Plan
 
-    - name: Ensure Terragrunt is installed at correct version
-      shell: bash
-      run: |
-        TG_VERSION=0.58.14
-        # Check if terragrunt is already installed and at the correct version
-        if command -v terragrunt >/dev/null 2>&1 && [ "$(terragrunt --version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')" = "v${TG_VERSION}" ]; then
-          echo "Terragrunt $TG_VERSION already installed."
-        else
-          echo "Installing Terragrunt $TG_VERSION..."
-          curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
-          chmod +x terragrunt
-          sudo mv -f terragrunt /usr/local/bin/terragrunt
-        fi
-        terragrunt --version
+on:
+  push:
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terragrunt.yml"
+  pull_request:
+
+jobs:
+  terragrunt-plan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Set up Terragrunt
+        run: |
+          TG_VERSION=0.58.14
+          if ! command -v terragrunt >/dev/null 2>&1 || [ "$(terragrunt --version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')" != "v${TG_VERSION}" ]; then
+            curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+            chmod +x terragrunt
+            sudo mv terragrunt /usr/local/bin/terragrunt
+          fi
+          terragrunt --version
+
+      - name: Terragrunt plan
+        run: |
+          cd terraform/live/eu-west-1/ec2/flask-backend
+          terragrunt plan
