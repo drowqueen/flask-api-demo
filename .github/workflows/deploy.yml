@@ -46,7 +46,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
       - uses: ./.github/actions/ansible-setup
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_backend.yml
 
   deploy-nat:
@@ -55,7 +62,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
       - uses: ./.github/actions/ansible-setup
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_nat.yml
 
   deploy-nginx:
@@ -64,7 +78,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
       - uses: ./.github/actions/ansible-setup
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_nginx.yml
 
   deploy-all:
@@ -73,5 +94,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
       - uses: ./.github/actions/ansible-setup
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_all.yml
