@@ -37,7 +37,7 @@ inputs = {
   instance_count              = local.instance_count
   tags = {
     Environment    = "dev"
-    Role           = "flask-backend"
+    Role           = "backend"
     app_servers    = "true"
     Owner          = "terragrunt"
   }

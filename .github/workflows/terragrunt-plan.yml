@@ -2,16 +2,8 @@ name: Terragrunt Plan
 
 on:
   push:
-    branches:
-      - 'feature/**'
-      - 'fix/**'
-    paths:
-      - '**/*.tf'
-      - '**/*.hcl'
-      - '.github/workflows/terragrunt-plan.yml'
-      - 'terraform/**/main.tf'
-      - 'terraform/**/terragrunt.hcl'
-  pull_request:
+    branches-ignore:
+      - main
     paths:
       - '**/*.tf'
       - '**/*.hcl'
@@ -23,6 +15,7 @@ on:
 jobs:
   terragrunt-plan:
     runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'  # double-check branch is not main
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,29 +48,24 @@ jobs:
 
       - name: Find changed terragrunt directories
         id: changed-dirs
+        shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_SHA=$(git rev-parse HEAD^)
-          fi
-
+          set -e
+          # No PR context here, use HEAD^ as base for diff
+          BASE_SHA=$(git rev-parse HEAD^)
           echo "Using base SHA: $BASE_SHA"
 
-          # Get all changed terraform .tf and .hcl files
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
 
-          # Separate module changes and other changes
           MODULE_CHANGED_FILES=$(echo "$CHANGED_FILES" | grep '^terraform/modules/' || true)
           TERRAGRUNT_CHANGED_FILES=$(echo "$CHANGED_FILES" | grep -v '^terraform/modules/' || true)
 
           DIRS=""
 
-          # Add stacks directly changed outside modules
           for file in $TERRAGRUNT_CHANGED_FILES; do
             d=$(dirname "$file")
-            while [ "$d" != "terraform" ] && [ "$d" != "." ]; do
-              if [ -f "$d/terragrunt.hcl" ]; then
+            while [[ "$d" != "terraform" && "$d" != "." ]]; do
+              if [[ -f "$d/terragrunt.hcl" ]]; then
                 DIRS="$DIRS $d"
                 break
               fi
@@ -85,10 +73,8 @@ jobs:
             done
           done
 
-          # Add stacks referencing changed modules
-          if [ -n "$MODULE_CHANGED_FILES" ]; then
+          if [[ -n "$MODULE_CHANGED_FILES" ]]; then
             MODULE_NAMES=$(echo "$MODULE_CHANGED_FILES" | awk -F/ '{print $3}' | sort -u)
-
             ALL_TG_DIRS=$(find terraform -type f -name terragrunt.hcl -exec dirname {} \;)
 
             for tgdir in $ALL_TG_DIRS; do
@@ -101,7 +87,6 @@ jobs:
             done
           fi
 
-          # Remove duplicates and trim whitespace
           DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
