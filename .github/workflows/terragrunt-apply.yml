@@ -1,0 +1,62 @@
+name: Terragrunt Apply
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terragrunt/**'
+      - '.github/workflows/terragrunt-apply.yml'
+
+jobs:
+  terragrunt-apply:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-west-1
+
+    outputs:
+      new_instances: ${{ steps.detect_new.outputs.new_instances }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION=0.58.14
+          wget -qO- https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64 > terragrunt
+          chmod +x terragrunt
+          sudo mv terragrunt /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Cache Terragrunt cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            terragrunt/.terragrunt-cache
+          key: ${{ runner.os }}-terragrunt-${{ hashFiles('terragrunt/**/*.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terragrunt-
+
+      - name: Terragrunt Init
+        working-directory: terragrunt
+        run: terragrunt init
+
+      - name: Terragrunt Apply
+        working-directory: terragrunt
+        run: terragrunt apply -auto-approve
+
+      - name: Detect new instances
+        id: detect_new
+        working-directory: terragrunt
+        run: |
+          # Example: output a flag if new instances were created
+          # Replace this with your actual detection logic
+          if terragrunt output | grep -q 'new_instances_created = true'; then
+            echo "new_instances=true" >> $GITHUB_OUTPUT
+          else
+            echo "new_instances=false" >> $GITHUB_OUTPUT
+          fi
+          
