@@ -7,7 +7,7 @@ runs:
       shell: bash
       run: |
         TF_VERSION=1.7.5
-        # Check if terraform is already installed and at the correct version
+        # Check if terraform is already installed and at the correct version (check both common locations)
         if command -v terraform >/dev/null 2>&1 && [ "$(terraform version -json | grep -o '"terraform_version": *"[^"]*"' | cut -d'"' -f4)" = "$TF_VERSION" ]; then
           echo "Terraform $TF_VERSION already installed."
         elif [ -x /usr/local/bin/terraform/terraform ] && [ "$(/usr/local/bin/terraform/terraform version -json | grep -o '"terraform_version": *"[^"]*"' | cut -d'"' -f4)" = "$TF_VERSION" ]; then
@@ -15,8 +15,8 @@ runs:
         else
           echo "Installing Terraform $TF_VERSION..."
           curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+          rm -f terraform
           unzip -o -q terraform.zip
-          # If /usr/local/bin/terraform is a directory, move binary inside it
           if [ -d /usr/local/bin/terraform ]; then
             sudo mv -f terraform /usr/local/bin/terraform/terraform
           else
