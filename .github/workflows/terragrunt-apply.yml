@@ -4,22 +4,42 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+    paths:
+      - '**/*.tf'
+      - '**/*.hcl'
+      - '.github/workflows/terragrunt-apply.yml'
+      - 'terraform/**/main.tf'
+      - 'terraform/**/terragrunt.hcl'
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+    paths:
+      - '**/*.tf'
+      - '**/*.hcl'
+      - '.github/workflows/terragrunt-apply.yml'
+      - 'terraform/**/main.tf'
+      - 'terraform/**/terragrunt.hcl'
 
 jobs:
   terragrunt-apply:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.merged == true || github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo with full history
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed for full git history and diff
+          fetch-depth: 0
 
-      - uses: ./.github/actions/aws-setup
+      - name: Setup AWS credentials
+        uses: ./.github/actions/aws-setup
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - uses: ./.github/actions/terragrunt-setup
+      - name: Setup Terragrunt
+        uses: ./.github/actions/terragrunt-setup
 
       - name: Cache Terragrunt cache
         uses: actions/cache@v4
@@ -29,20 +49,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Find changed terragrunt directories (cumulative since branch divergence)
+      - name: Find changed terragrunt directories cumulatively since branch divergence
         id: changed-dirs
         shell: bash
         run: |
           set -e
 
-          # Fetch main branch to ensure up-to-date refs
+          # Fetch main branch to get up-to-date refs
           git fetch origin main
 
-          # Find merge base between current HEAD and main branch
-          BASE_SHA=$(git merge-base HEAD origin/main)
-          echo "Merge base commit (branch divergence point): $BASE_SHA"
+          # Determine base SHA for diff:
+          # For PR merge events, use the merge commit's parent 1 (main branch before merge)
+          # For push events, use merge-base between HEAD and origin/main
 
-          # Get changed terraform files cumulatively since branch divergence
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA=$(git rev-parse HEAD^1)
+          else
+            BASE_SHA=$(git merge-base HEAD origin/main)
+          fi
+
+          echo "Base commit for diff: $BASE_SHA"
+
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
 
           MODULE_CHANGED_FILES=$(echo "$CHANGED_FILES" | grep '^terraform/modules/' || true)
@@ -50,7 +77,6 @@ jobs:
 
           DIRS=""
 
-          # Add stacks directly changed outside modules
           for file in $TERRAGRUNT_CHANGED_FILES; do
             d=$(dirname "$file")
             while [[ "$d" != "terraform" && "$d" != "." ]]; do
@@ -62,10 +88,8 @@ jobs:
             done
           done
 
-          # Add stacks referencing changed modules
           if [[ -n "$MODULE_CHANGED_FILES" ]]; then
             MODULE_NAMES=$(echo "$MODULE_CHANGED_FILES" | awk -F/ '{print $3}' | sort -u)
-
             ALL_TG_DIRS=$(find terraform -type f -name terragrunt.hcl -exec dirname {} \;)
 
             for tgdir in $ALL_TG_DIRS; do
@@ -78,31 +102,15 @@ jobs:
             done
           fi
 
-          # Remove duplicates and trim whitespace
           DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
 
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
 
-      - name: Debug Terragrunt directories to apply
-        if: false
-        run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
-          echo "Terragrunt will apply these directories:"
-          for d in "${dirs[@]}"; do
-            echo "  - $d"
-          done
-
-      - name: Terragrunt apply in changed directories
+      - name: Run Terragrunt apply in changed directories
         if: steps.changed-dirs.outputs.dirs != ''
-        shell: bash
         run: |
-          set -e
           IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
-            if [[ ! -f "$d/terragrunt.hcl" ]]; then
-              echo "Skipping $d because terragrunt.hcl not found"
-              continue
-            fi
             echo "==> Running terragrunt apply in $d"
-            (cd "$d" && terragrunt init --terragrunt-non-interactive && terragrunt apply -auto-approve --terragrunt-non-interactive)
+            (cd "$d" && terragrunt init --terragrunt-non-interactive && terragrunt apply --terragrunt-non-interactive -auto-approve)
           done
