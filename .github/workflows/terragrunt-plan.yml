@@ -57,12 +57,13 @@ jobs:
       - name: Debug Terragrunt remote state key
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
+          set -x
           for d in ${{ steps.changed-dirs.outputs.dirs }}; do
             echo "==== $d ===="
             cd $d
             echo "PWD: $(pwd)"
             echo "Terragrunt config path: $(realpath terragrunt.hcl)"
-            terragrunt terragrunt-info | grep '"remote_state":' -A 20
+            terragrunt terragrunt-info || true
             cd -
           done
 
