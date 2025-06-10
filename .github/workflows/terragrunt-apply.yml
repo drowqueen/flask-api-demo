@@ -2,11 +2,8 @@ name: Terragrunt Apply
 
 on:
   push:
-    paths:
-      - '**/*.tf'
-      - '**/*.hcl'
-      - '.github/workflows/terragrunt-apply.yml'
-  pull_request:
+    branches:
+      - main
     paths:
       - '**/*.tf'
       - '**/*.hcl'
