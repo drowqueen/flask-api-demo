@@ -9,6 +9,7 @@ runs:
         TF_VERSION=1.7.5
         curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
         unzip -o -q terraform.zip
+        sudo rm -rf /usr/local/bin/terraform
         sudo mv terraform /usr/local/bin/
         terraform -version
 
@@ -18,5 +19,6 @@ runs:
         TG_VERSION=0.58.14
         curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
         chmod +x terragrunt
+        sudo rm -rf /usr/local/bin/terragrunt
         sudo mv terragrunt /usr/local/bin/terragrunt
         terragrunt --version
