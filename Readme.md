@@ -81,10 +81,9 @@ Run in each directory:
 terragrunt apply
 ```
 
-### GitHub Actions Workflow
+## GitHub Actions Workflows
 
-A GitHub Actions workflow runs on push and pull request events and performs the following steps:
-
+### deploy.yml
 - Checks out the repository.
 - Sets up Python 3.9 environment.
 - Installs dependencies including pytest and requests.
@@ -93,6 +92,22 @@ A GitHub Actions workflow runs on push and pull request events and performs the 
 - Reports test results and fails the workflow if any tests fail.
 
 This ensures continuous integration and automated validation of the Flask backend code before deployment.
+
+### terragrunt-plan.yml
+
+- Checks out the repository with full git history.
+- Sets up AWS credentials for Terragrunt access.
+- Installs and configures Terragrunt CLI.
+- Caches Terragrunt cache directory to speed up repeated runs.
+- Detects which Terragrunt directories have changed based on .tf and .hcl file diffs.
+- Runs terragrunt plan in each changed directory with non-interactive and detailed output.
+- Reports any planned infrastructure changes or errors.
+- Detects the cumulative changes since the branch diverged from main.
+
+### terragrunt-apply.yml
+¨
+Same steps as the terragrunt-plan workflow, but it applies the cumulative changes pushed
+to the branch since it diverged from main.
 
 ## Manual Deployment and Testing
 
