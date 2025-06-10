@@ -23,6 +23,7 @@ terraform.tfstate.backup
 *.tfstate
 *.tfstate.backup
 secrets.tf
+!.terraform.lock.hcl
 
 #asdf
 .tool-versions
