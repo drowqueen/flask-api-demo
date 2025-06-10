@@ -1,8 +1,11 @@
 # Root terragrunt.hcl
 locals {
-  # Automatically load region-level variables
-  region_vars = read_terragrunt_config(find_in_parent_folders("region.hcl"))
-  aws_region   = local.region_vars.locals.aws_region
+  # Load region-level variables, handle missing region.hcl gracefully
+  region_vars = try(
+    read_terragrunt_config(find_in_parent_folders("region.hcl")),
+    {}
+  )
+  aws_region = try(local.region_vars.locals.aws_region, "eu-west-1") # fallback default
 }
 
 # Generate an AWS provider block
@@ -23,9 +26,9 @@ remote_state {
   config = {
     encrypt        = true
     bucket         = "tg-state-drq"
-    key = "${replace(path_relative_to_include(), "terraform/", "")}/terraform.tfstate"
-    region         = local.aws_region                   
-    dynamodb_table = "my-terragrunt-locks"  # Optional: For state locking
+    key            = "${replace(path_relative_to_include(), "terraform/", "")}/terraform.tfstate"
+    region         = local.aws_region
+    dynamodb_table = "my-terragrunt-locks"
     s3_bucket_tags = {
       Owner = "Terragrunt",
     }
@@ -40,13 +43,11 @@ terraform {
   extra_arguments "vars" {
     commands = ["apply", "plan"]
     arguments = [
-      "-lock-timeout=300s"
     ]
   }
 }
 
-# Configure root level variables that all resources can inherit. This is especially helpful with multi-account configs
-# where terraform_remote_state data sources are placed directly into the modules.
+# Configure root level variables that all resources can inherit.
 inputs = merge(
-  local.region_vars.locals,
+  try(local.region_vars.inputs, {}),
 )
