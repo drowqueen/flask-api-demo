@@ -37,7 +37,7 @@ inputs = {
   tags = {
       Environment     = "dev"
       gateway_hosts   = "true"
-      Name            = "nat-instance"
+      Name            = "nat"
       Owner           = "terragrunt"
 
   }
