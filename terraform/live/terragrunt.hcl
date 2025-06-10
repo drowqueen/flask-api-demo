@@ -23,7 +23,7 @@ remote_state {
   config = {
     encrypt        = true
     bucket         = "tg-state-drq"
-    key            = "${path_relative_to_include()}/terraform.tfstate"
+    key = "${replace(path_relative_to_include(), "terraform/", "")}/terraform.tfstate"
     region         = local.aws_region                   
     dynamodb_table = "my-terragrunt-locks"  # Optional: For state locking
     s3_bucket_tags = {
