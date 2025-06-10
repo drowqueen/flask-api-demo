@@ -1,19 +1,19 @@
 output "instance_id" {
-  description = "List of IDs of the EC2 instances"
-  value       = [for instance in module.ec2_instance : instance.id]
+  description = "ID of the first EC2 instance"
+  value       = module.ec2_instance[0].id
 }
 
 output "public_ip" {
-  description = "List of public IP addresses of the EC2 instances, if assigned"
-  value       = var.associate_public_ip_address ? [for instance in module.ec2_instance : instance.public_ip] : ["No public IP assigned"]
+  description = "Public IP address of the first EC2 instance, if assigned"
+  value       = var.associate_public_ip_address ? module.ec2_instance[0].public_ip : "No public IP assigned"
 }
 
 output "private_ip" {
-  description = "List of private IP addresses of the EC2 instances"
-  value       = [for instance in module.ec2_instance : instance.private_ip]
+  description = "Private IP address of the first EC2 instance"
+  value       = module.ec2_instance[0].private_ip
 }
 
 output "network_interface_id" {
-  description = "The primary network interface ID of the NAT instance"
+  description = "The primary network interface ID of the first EC2 instance"
   value       = module.ec2_instance[0].primary_network_interface_id
 }

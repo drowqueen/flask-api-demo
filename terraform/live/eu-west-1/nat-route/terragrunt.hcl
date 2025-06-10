@@ -1,3 +1,7 @@
+include {
+  path = find_in_parent_folders("root.hcl")
+}
+
 terraform {
   source = "../../..//modules/nat-route"
 }
@@ -11,10 +15,9 @@ dependency "nat_instance" {
 }
 
 inputs = {
-  route_table_ids      = dependency.vpc.outputs.private_route_table_ids
-  vpc_id               = dependency.vpc.outputs.vpc_id
-  nat_instance_id      = dependency.nat_instance.outputs.instance_id
-  network_interface_id = dependency.nat_instance.outputs.network_interface_id  
-  private_subnet_ids   = dependency.vpc.outputs.private_subnets
-  security_group_id    = "sg-0636b592106125ed4"
+  route_table_ids = concat(
+    dependency.vpc.outputs.private_route_table_ids,
+    try(dependency.vpc.outputs.database_route_table_ids, [])
+  )
+  network_interface_id = dependency.nat_instance.outputs.network_interface_id
 }
