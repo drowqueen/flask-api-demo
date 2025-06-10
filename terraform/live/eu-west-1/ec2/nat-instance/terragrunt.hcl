@@ -36,7 +36,6 @@ inputs = {
   key_name                 = "flask-demo"
   tags = {
       Environment     = "dev"
-      Role            = "nat"
       gateway_hosts   = "true"
       Name            = "nat-instance"
       Owner           = "terragrunt"

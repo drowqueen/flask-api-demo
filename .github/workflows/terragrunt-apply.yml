@@ -1,26 +1,18 @@
 name: Terragrunt Apply
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches:
       - main
-    paths:
-      - '**/*.tf'
-      - '**/*.hcl'
-      - '.github/workflows/terragrunt-apply.yml'
-      - 'terraform/**/main.tf'
-      - 'terraform/**/terragrunt.hcl'
   workflow_dispatch:
 
 jobs:
   terragrunt-apply:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # needed for full git history and diff
 
       - uses: ./.github/actions/aws-setup
         with:
