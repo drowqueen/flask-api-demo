@@ -3,7 +3,6 @@
 import boto3
 import json
 import os
-import sys
 import tempfile
 
 def get_ssh_key_from_ssm(region, parameter_name):
@@ -43,36 +42,32 @@ def main():
     gateway_instances = get_instances_by_tag(region, "gateway_hosts")
     app_instances = get_instances_by_tag(region, "app_servers")
 
-    if not bastion_instances:
-        print("No bastion host found. Exiting.", file=sys.stderr)
-        sys.exit(1)
-    if not gateway_instances:
-        print("No gateway host found. Exiting.", file=sys.stderr)
-        sys.exit(1)
-
     # Extract IP addresses
     bastion_hosts = []
     for inst in bastion_instances:
         public_ip = inst.get("PublicIpAddress")
         private_ip = inst.get("PrivateIpAddress")
-        bastion_hosts.append({
-            "ansible_host": public_ip,  # SSH via public IP
-            "private_ip": private_ip
-        })
+        if public_ip:
+            bastion_hosts.append({
+                "ansible_host": public_ip,
+                "private_ip": private_ip
+            })
 
     gateway_hosts = []
     for inst in gateway_instances:
         public_ip = inst.get("PublicIpAddress")
         private_ip = inst.get("PrivateIpAddress")
-        gateway_hosts.append({
-            "ansible_host": public_ip,  # SSH via public IP
-            "private_ip": private_ip
-        })
+        if public_ip:
+            gateway_hosts.append({
+                "ansible_host": public_ip,
+                "private_ip": private_ip
+            })
 
     app_hosts = []
     for inst in app_instances:
         private_ip = inst.get("PrivateIpAddress")
-        app_hosts.append(private_ip)  # Use private IP directly
+        if private_ip:
+            app_hosts.append(private_ip)
 
     # Build inventory format
     inventory = {
@@ -81,7 +76,6 @@ def main():
             "vars": {
                 "ansible_user": "ubuntu",
                 "ansible_python_interpreter": "/usr/bin/python3",
-                # SSH uses ansible_host (public IP)
             },
         },
         "gateway_hosts": {
@@ -89,7 +83,6 @@ def main():
             "vars": {
                 "ansible_user": "ec2-user",
                 "ansible_python_interpreter": "/usr/bin/python3.8",
-                # SSH uses ansible_host (public IP)
             },
         },
         "app_servers": {
@@ -97,11 +90,10 @@ def main():
             "vars": {
                 "ansible_user": "ubuntu",
                 "ansible_python_interpreter": "/usr/bin/python3",
-                # SSH uses private IP directly, proxied via bastion
                 "ansible_ssh_common_args": (
                     f'-o StrictHostKeyChecking=no '
                     f'-o ProxyCommand="ssh -W %h:%p -q ubuntu@{bastion_hosts[0]["ansible_host"]}"'
-                ),
+                ) if bastion_hosts else "",
             },
         },
         "_meta": {
@@ -109,7 +101,7 @@ def main():
         },
     }
 
-    # Add hostvars for bastion and gateway hosts (mapping public IPs back to private IPs)
+    # Add hostvars for bastion and gateway hosts
     for h in bastion_hosts:
         inventory["_meta"]["hostvars"][h["ansible_host"]] = {
             "private_ip": h["private_ip"],
@@ -120,18 +112,16 @@ def main():
             "private_ip": h["private_ip"],
             "ansible_host": h["ansible_host"],
         }
-
-    # Also add hostvars for app servers (private IP = ansible_host)
     for ip in app_hosts:
         inventory["_meta"]["hostvars"][ip] = {
             "ansible_host": ip,
         }
 
-    # Add group var for NAT private IP (first NAT host private IP)
-    inventory["gateway_hosts"]["vars"]["nat_private_ip"] = gateway_hosts[0]["private_ip"]
+    # Add group var for NAT private IP if available
+    if gateway_hosts:
+        inventory["gateway_hosts"]["vars"]["nat_private_ip"] = gateway_hosts[0]["private_ip"]
 
     print(json.dumps(inventory, indent=2))
-
 
 if __name__ == "__main__":
     main()

@@ -11,9 +11,8 @@ on:
       - '.github/workflows/terragrunt-plan.yml'
 
 jobs:
-  terragrunt-plan:
+  terragrunt-plan-vpc:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -41,10 +40,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Terragrunt Init
-        working-directory: terraform
+      - name: Terragrunt Init (VPC)
+        working-directory: terraform/live/eu-west-1/flask-demo-vpc
         run: terragrunt init
 
-      - name: Terragrunt Plan
-        working-directory: terraform
+      - name: Terragrunt Plan (VPC)
+        working-directory: terraform/live/eu-west-1/flask-demo-vpc
         run: terragrunt plan

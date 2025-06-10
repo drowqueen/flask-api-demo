@@ -10,9 +10,8 @@ on:
       - '.github/workflows/terragrunt-apply.yml'
 
 jobs:
-  terragrunt-apply:
+  terragrunt-apply-vpc:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -40,22 +39,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Terragrunt Init
-        working-directory: terraform
+      - name: Terragrunt Init (VPC)
+        working-directory: terraform/live/eu-west-1/flask-demo-vpc
         run: terragrunt init
 
-      - name: Terragrunt Apply
-        working-directory: terraform
+      - name: Terragrunt Apply (VPC)
+        working-directory: terraform/live/eu-west-1/flask-demo-vpc
         run: terragrunt apply -auto-approve
-
-      - name: Detect new instances
-        id: detect_new
-        working-directory: terraform
-        run: |
-          # Example: output a flag if new instances were created
-          # Replace this with your actual detection logic
-          if terragrunt output | grep -q 'new_instances_created = true'; then
-            echo "new_instances=true" >> $GITHUB_OUTPUT
-          else
-            echo "new_instances=false" >> $GITHUB_OUTPUT
-          fi

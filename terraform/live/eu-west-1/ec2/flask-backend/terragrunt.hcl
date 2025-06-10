@@ -2,6 +2,10 @@ include {
   path = find_in_parent_folders()
 }
 
+locals {
+  instance_count = 1
+}
+
 terraform {
   source = "${get_parent_terragrunt_dir("root")}/..//modules/ec2"
 }
@@ -30,19 +34,11 @@ inputs = {
   vpc_security_group_ids      = [dependency.flask-sg.outputs.security_group_id]
   key_name                    = "flask-demo"
   associate_public_ip_address = false
-  instance_count              = 2
+  instance_count              = local.instance_count
   tags = {
     Environment    = "dev"
     Role           = "flask-backend"
     app_servers    = "true"
     Owner          = "terragrunt"
-  }
-  instance_tags = {
-    "0" = {
-      Name = "flask-backend-1"
-    }
-    "1" = {
-      Name = "flask-backend-2"
-    }
   }
 }
