@@ -17,9 +17,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: AWS Credentials Setup
-        uses: ./.github/actions/aws.yml
+        uses: ./.github/actions/aws-setup
 
-      - uses: ./.github/actions/terragrunt-setup.yml
+      - uses: ./.github/actions/terragrunt-setup
 
       - name: Cache Terragrunt cache
         uses: actions/cache@v4

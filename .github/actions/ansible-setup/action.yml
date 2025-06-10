@@ -4,7 +4,7 @@ runs:
   using: "composite"
   steps:
     - name: AWS Credentials Setup
-      uses: ./aws.yml
+      uses: ../aws-setup
 
     - name: Set up Python
       uses: actions/setup-python@v5

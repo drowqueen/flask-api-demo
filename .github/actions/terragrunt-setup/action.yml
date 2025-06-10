@@ -4,7 +4,7 @@ runs:
   using: "composite"
   steps:
     - name: AWS Credentials Setup
-      uses: ./aws.yml
+      uses: ../aws-setup
 
     - name: Set up Terraform
       uses: hashicorp/setup-terraform@v3
