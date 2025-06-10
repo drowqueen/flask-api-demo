@@ -38,7 +38,7 @@ inputs = {
       Environment     = "dev"
       Role            = "nat"
       gateway_hosts   = "true"
-      Name            = "nat"
+      Name            = "nat-instance"
       Owner           = "terragrunt"
 
   }
