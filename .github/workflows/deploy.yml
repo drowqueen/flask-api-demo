@@ -39,7 +39,6 @@ jobs:
               - 'ansible/playbooks/deploy_all.yml'
               - 'ansible/roles/**'
               - 'terraform/**'
-              - 'terragrunt/**'
 
   deploy-backend:
     needs: detect-changes
