@@ -32,6 +32,15 @@ jobs:
 
       - uses: ./.github/actions/terragrunt-setup
 
+      - name: Debug cache directory
+        run: |
+          if [ -d "terraform/.terragrunt-cache" ]; then
+            echo "Cache directory terraform/.terragrunt-cache exists:"
+            ls -ld terraform/.terragrunt-cache
+          else
+            echo "Cache directory terraform/.terragrunt-cache not found"
+          fi
+
       - name: Cache Terragrunt cache
         uses: actions/cache@v4
         with:
@@ -51,9 +60,8 @@ jobs:
 
           echo "Using base SHA: $BASE_SHA"
 
-          # Find changed .tf and .hcl files under terraform/
+          # Find changed .tf/.hcl files under terraform/
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
-
           DIRS=""
           for file in $CHANGED_FILES; do
             d=$(dirname "$file")
@@ -69,9 +77,6 @@ jobs:
 
           # Remove duplicates and exclude terraform/live root explicitly (no terragrunt.hcl there)
           DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
-
-          # Trim leading/trailing spaces and collapse whitespace
-          DIRS=$(echo "$DIRS" | xargs)
 
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
 
