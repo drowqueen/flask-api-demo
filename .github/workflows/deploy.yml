@@ -46,6 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
       - uses: ./.github/actions/ansible-setup
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_backend.yml
 
@@ -55,6 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
       - uses: ./.github/actions/ansible-setup
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_nat.yml
 
@@ -64,6 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
       - uses: ./.github/actions/ansible-setup
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_nginx.yml
 
@@ -73,5 +76,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/aws-setup
       - uses: ./.github/actions/ansible-setup
       - run: ansible-playbook -i inventory.yml ansible/playbooks/deploy_all.yml

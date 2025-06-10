@@ -16,8 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: AWS Credentials Setup
-        uses: ./.github/actions/aws-setup
+      - uses: ./.github/actions/aws-setup
 
       - uses: ./.github/actions/terragrunt-setup
 

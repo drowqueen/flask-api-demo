@@ -1,11 +1,8 @@
-name: Ansible/Python/AWS Setup
-description: Setup Python, install Ansible, AWS CLI, dependencies, and prepare inventory
+name: Ansible/Python Setup
+description: Setup Python, install Ansible, dependencies, and prepare inventory
 runs:
   using: "composite"
   steps:
-    - name: AWS Credentials Setup
-      uses: ../aws-setup
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
