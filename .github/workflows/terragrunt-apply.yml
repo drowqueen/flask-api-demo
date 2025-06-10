@@ -8,7 +8,7 @@ on:
       - '**/*.tf'
       - '**/*.hcl'
       - '.github/workflows/terragrunt-apply.yml'
-      - 'terraform/modules/**/main.tf'
+      - 'terraform/**'
   workflow_dispatch:
 
 jobs:
@@ -35,34 +35,79 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Find changed terragrunt directories
-        id: changed-dirs
+      - name: Get changed files
+        id: changed-files
         run: |
-          # Determine base SHA for diff depending on event type
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
           else
             BASE_SHA=$(git rev-parse HEAD^)
           fi
           echo "Using base SHA: $BASE_SHA"
-          echo "Recent commits:"
-          git log --oneline -n 5
-          echo "Changed files:"
-          git diff --name-only $BASE_SHA HEAD
-          CHANGED=$(git diff --name-only $BASE_SHA HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
-          DIRS=""
-          for d in $CHANGED; do
-            if [ -f "$d/terragrunt.hcl" ]; then
-              DIRS="$DIRS $d"
+          git diff --name-only $BASE_SHA HEAD > changed_files.txt
+          cat changed_files.txt
+          FILES=$(cat changed_files.txt | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Find changed module names
+        id: changed-modules
+        run: |
+          MODULES=""
+          for file in ${{ steps.changed-files.outputs.files }}; do
+            if [[ "$file" == terraform/modules/* ]]; then
+              # get module name (3rd path part)
+              mod=$(echo "$file" | cut -d '/' -f3)
+              MODULES="$MODULES $mod"
             fi
           done
-          echo "dirs=$DIRS" >> $GITHUB_OUTPUT
+          # dedupe
+          MODULES=$(echo $MODULES | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "modules=$MODULES" >> $GITHUB_OUTPUT
 
-      - name: Terragrunt plan in changed directories
-        if: steps.changed-dirs.outputs.dirs != ''
+      - name: Find live dirs referencing changed modules
+        id: live-dirs-using-modules
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          USED_DIRS=""
+          for mod in ${{ steps.changed-modules.outputs.modules }}; do
+            echo "Searching for live dirs using module: $mod"
+            matches=$(grep -rl "terraform/modules/$mod" terraform/live/*/terragrunt.hcl || true)
+            for f in $matches; do
+              d=$(dirname "$f")
+              USED_DIRS="$USED_DIRS $d"
+            done
+          done
+          # dedupe
+          USED_DIRS=$(echo $USED_DIRS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "used_dirs=$USED_DIRS" >> $GITHUB_OUTPUT
+
+      - name: Find changed live directories (any .hcl or .tf files changed under terraform/live)
+        id: changed-live-dirs
+        run: |
+          LIVE_DIRS=""
+          for file in ${{ steps.changed-files.outputs.files }}; do
+            if [[ "$file" == terraform/live/* ]]; then
+              d=$(dirname "$file")
+              LIVE_DIRS="$LIVE_DIRS $d"
+            fi
+          done
+          # dedupe
+          LIVE_DIRS=$(echo $LIVE_DIRS | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "live_dirs=$LIVE_DIRS" >> $GITHUB_OUTPUT
+
+      - name: Determine final dirs to apply
+        id: dirs-to-apply
+        run: |
+          USED="${{ steps.live-dirs-using-modules.outputs.used_dirs }}"
+          LIVECHANGED="${{ steps.changed-live-dirs.outputs.live_dirs }}"
+          # combine and dedupe
+          ALL=$(echo "$USED $LIVECHANGED" | tr ' ' '\n' | sort -u | tr '\n' ' ')
+          echo "dirs_to_apply=$ALL" >> $GITHUB_OUTPUT
+
+      - name: Apply Terragrunt in target directories
+        if: steps.dirs-to-apply.outputs.dirs_to_apply != ''
+        run: |
+          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-apply.outputs.dirs_to_apply }}"
           for d in "${dirs[@]}"; do
-            echo "==> Running terragrunt plan in $d"
-            (cd "$d" && terragrunt init && terragrunt plan)
+            echo "==> Applying terragrunt in $d"
+            (cd "$d" && terragrunt init && terragrunt apply -auto-approve)
           done
