@@ -121,6 +121,7 @@ jobs:
             (
               cd "$d"
               terragrunt init --terragrunt-non-interactive --terragrunt-include-external-dependencies
-              terragrunt plan --terragrunt-non-interactive --terragrunt-include-external-dependencies --terragrunt-log-level debug
+              terragrunt plan -out=plan.tfplan --terragrunt-non-interactive --terragrunt-include-external-dependencies --terragrunt-log-level debug
+              terragrunt show -no-color plan.tfplan
             )
           done
