@@ -3,22 +3,37 @@ description: Install Terraform and Terragrunt for CI workflows
 runs:
   using: "composite"
   steps:
-    - name: Install Terraform
+    - name: Install Terraform if needed
       shell: bash
       run: |
         TF_VERSION=1.7.5
-        curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
-        unzip -o -q terraform.zip
-        sudo rm -rf /usr/local/bin/terraform
-        sudo mv terraform /usr/local/bin/
-        terraform -version
+        # Check if terraform is already installed and at the correct version
+        if command -v terraform >/dev/null 2>&1 && [ "$(terraform version -json | grep -o '"terraform_version": *"[^"]*"' | cut -d'"' -f4)" = "$TF_VERSION" ]; then
+          echo "Terraform $TF_VERSION already installed."
+        else
+          echo "Installing Terraform $TF_VERSION..."
+          curl -sSL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+          unzip -o -q terraform.zip
+          # If /usr/local/bin/terraform is a directory, move binary inside it
+          if [ -d /usr/local/bin/terraform ]; then
+            sudo mv -f terraform /usr/local/bin/terraform/terraform
+          else
+            sudo mv -f terraform /usr/local/bin/terraform
+          fi
+        fi
+        /usr/local/bin/terraform/terraform -version 2>/dev/null || terraform -version
 
-    - name: Install Terragrunt
+    - name: Install Terragrunt if needed
       shell: bash
       run: |
         TG_VERSION=0.58.14
-        curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
-        chmod +x terragrunt
-        sudo rm -rf /usr/local/bin/terragrunt
-        sudo mv terragrunt /usr/local/bin/terragrunt
+        # Check if terragrunt is already installed and at the correct version
+        if command -v terragrunt >/dev/null 2>&1 && [ "$(terragrunt --version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')" = "v${TG_VERSION}" ]; then
+          echo "Terragrunt $TG_VERSION already installed."
+        else
+          echo "Installing Terragrunt $TG_VERSION..."
+          curl -sSL -o terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64
+          chmod +x terragrunt
+          sudo mv -f terragrunt /usr/local/bin/terragrunt
+        fi
         terragrunt --version
