@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # full history needed for git diff
+          fetch-depth: 0  # Ensure full history for accurate git diff
 
       - uses: ./.github/actions/aws-setup
         with:
@@ -41,7 +41,7 @@ jobs:
             ${{ runner.os }}-terragrunt-
 
       - name: Find changed terragrunt directories
-        id: dirs-to-plan
+        id: changed-dirs
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -54,7 +54,6 @@ jobs:
           # Find changed .tf and .hcl files under terraform/
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
 
-          # Collect live dirs where terragrunt.hcl exists and files changed
           DIRS=""
           for file in $CHANGED_FILES; do
             d=$(dirname "$file")
@@ -71,27 +70,29 @@ jobs:
           # Remove duplicates and exclude terraform/live root explicitly (no terragrunt.hcl there)
           DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
 
+          # Trim leading/trailing spaces and collapse whitespace
+          DIRS=$(echo "$DIRS" | xargs)
+
           echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
 
-      - name: Debug Terragrunt directories to plan
-        if: steps.dirs-to-plan.outputs.dirs != ''
+      - name: Debug Terragrunt remote state key
+        if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-plan.outputs.dirs }}"
-          echo "Terragrunt will plan these directories:"
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
-            echo "  - $d"
+            echo "==== $d ===="
+            cd "$d"
+            echo "PWD: $(pwd)"
+            echo "Terragrunt config path: $(realpath terragrunt.hcl)"
+            terragrunt terragrunt-info || true
+            cd - > /dev/null
           done
 
       - name: Terragrunt plan in changed directories
-        if: steps.dirs-to-plan.outputs.dirs != ''
+        if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-plan.outputs.dirs }}"
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
-            # Double check terragrunt.hcl exists before running
-            if [ ! -f "$d/terragrunt.hcl" ]; then
-              echo "Skipping $d because terragrunt.hcl not found"
-              continue
-            fi
-            echo "==> Running terragrunt plan in $d"
+            echo "Running terragrunt plan in $d"
             (cd "$d" && terragrunt init && terragrunt plan)
           done
