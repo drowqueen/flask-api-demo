@@ -26,7 +26,7 @@ locals {
 }
 
 inputs = {
-  name                        = "demo-backend"
+  name                        = "flask-backend"
   instance_type               = "t2.micro"
   ami_id                      = dependency.ami.outputs.ami_id
   availability_zone           = "eu-west-1a"
