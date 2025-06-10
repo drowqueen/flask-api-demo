@@ -111,17 +111,17 @@ jobs:
             terragrunt terragrunt-info || true
             cd - > /dev/null
           done
-
+      
       - name: Terragrunt plan in changed directories
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
           IFS=$'\n' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
           for d in "${dirs[@]}"; do
             echo "Running terragrunt plan in $d"
-            (
-              cd "$d"
-              terragrunt init --terragrunt-non-interactive --terragrunt-include-external-dependencies
-              terragrunt plan -out=plan.tfplan --terragrunt-non-interactive --terragrunt-include-external-dependencies --terragrunt-log-level debug
-              terragrunt show -no-color plan.tfplan
-            )
+            cd "$d"
+            terragrunt init --terragrunt-non-interactive --terragrunt-include-external-dependencies
+            terragrunt plan -out=plan.tfplan --terragrunt-non-interactive --terragrunt-include-external-dependencies --terragrunt-log-level debug
+            echo "Terragrunt plan output for $d:"
+            terragrunt show -no-color plan.tfplan
+            cd - > /dev/null
           done
