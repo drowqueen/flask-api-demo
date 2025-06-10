@@ -26,9 +26,6 @@ jobs:
 
       - uses: ./.github/actions/terragrunt-setup
 
-      - name: Debug AWS identity
-        run: aws sts get-caller-identity
-
       - name: Cache Terragrunt cache
         uses: actions/cache@v4
         with:
@@ -38,10 +35,25 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Terragrunt Init (VPC)
-        working-directory: terraform/live/eu-west-1/flask-demo-vpc
-        run: terragrunt init
-
-      - name: Terragrunt Apply (VPC)
-        working-directory: terraform/live/eu-west-1/flask-demo-vpc
-        run: terragrunt apply -auto-approve
+      - name: Find changed terragrunt directories
+        id: changed-dirs
+        run: |
+          # Determine base SHA for diff depending on event type
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA=$(git rev-parse HEAD^)
+          fi
+          echo "Using base SHA: $BASE_SHA"
+          echo "Recent commits:"
+          git log --oneline -n 5
+          echo "Changed files:"
+          git diff --name-only $BASE_SHA HEAD
+          CHANGED=$(git diff --name-only $BASE_SHA HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
+          DIRS=""
+          for d in $CHANGED; do
+            if [ -f "$d/terragrunt.hcl" ]; then
+              DIRS="$DIRS $d"
+            fi
+          done
+          echo "dirs=$DIRS" >> $GITHUB_OUTPUT
