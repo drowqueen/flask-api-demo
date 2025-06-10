@@ -24,6 +24,9 @@ jobs:
 
       - uses: ./.github/actions/terragrunt-setup
 
+      - name: Debug AWS identity
+        run: aws sts get-caller-identity
+
       - name: Cache Terragrunt cache
         uses: actions/cache@v4
         with:
