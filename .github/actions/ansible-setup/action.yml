@@ -1,8 +1,20 @@
 name: Ansible/Python Setup
-description: Setup Python, install Ansible, dependencies, and prepare inventory
+description: Setup Python, install Ansible, dependencies, prepare inventory, and set up SSH key
+inputs:
+  ssh-private-key:
+    description: "SSH key for EC2 instances"
+    required: true
 runs:
   using: "composite"
   steps:
+    - name: Set up SSH key
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
