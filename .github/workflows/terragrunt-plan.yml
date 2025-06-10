@@ -3,12 +3,15 @@ name: Terragrunt Plan
 on:
   push:
     paths:
-      - 'terraform/**'
+      - '**/*.tf'
+      - '**/*.hcl'
       - '.github/workflows/terragrunt-plan.yml'
   pull_request:
     paths:
-      - 'terraform/**'
+      - '**/*.tf'
+      - '**/*.hcl'
       - '.github/workflows/terragrunt-plan.yml'
+  workflow_dispatch:
 
 jobs:
   terragrunt-plan-vpc:

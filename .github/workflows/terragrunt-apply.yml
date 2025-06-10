@@ -1,13 +1,17 @@
 name: Terragrunt Apply
 
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
     paths:
-      - 'terraform/**'
+      - '**/*.tf'
+      - '**/*.hcl'
       - '.github/workflows/terragrunt-apply.yml'
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '**/*.hcl'
+      - '.github/workflows/terragrunt-apply.yml'
+  workflow_dispatch:
 
 jobs:
   terragrunt-apply-vpc:
@@ -22,6 +26,7 @@ jobs:
           aws-region: eu-west-1
 
       - uses: ./.github/actions/terragrunt-setup
+
       - name: Debug AWS identity
         run: aws sts get-caller-identity
 
