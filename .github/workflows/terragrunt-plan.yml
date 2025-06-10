@@ -44,17 +44,12 @@ jobs:
       - name: Find changed terragrunt directories
         id: changed-dirs
         run: |
-          # Determine base SHA for diff depending on event type
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
           else
             BASE_SHA=$(git rev-parse HEAD^)
           fi
           echo "Using base SHA: $BASE_SHA"
-          echo "Recent commits:"
-          git log --oneline -n 5
-          echo "Changed files:"
-          git diff --name-only $BASE_SHA HEAD
           CHANGED=$(git diff --name-only $BASE_SHA HEAD | grep '^terraform/' | xargs -n1 dirname | sort -u)
           DIRS=""
           for d in $CHANGED; do
@@ -67,20 +62,21 @@ jobs:
       - name: Debug Terragrunt remote state key
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          set -x
-          for d in ${{ steps.changed-dirs.outputs.dirs }}; do
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          for d in "${dirs[@]}"; do
             echo "==== $d ===="
-            cd $d
+            cd "$d"
             echo "PWD: $(pwd)"
             echo "Terragrunt config path: $(realpath terragrunt.hcl)"
             terragrunt terragrunt-info || true
-            cd -
+            cd - > /dev/null
           done
 
       - name: Terragrunt plan in changed directories
         if: steps.changed-dirs.outputs.dirs != ''
         run: |
-          for d in ${{ steps.changed-dirs.outputs.dirs }}; do
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          for d in "${dirs[@]}"; do
             echo "Running terragrunt plan in $d"
-            (cd $d && terragrunt init && terragrunt plan)
+            (cd "$d" && terragrunt init && terragrunt plan)
           done

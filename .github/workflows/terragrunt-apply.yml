@@ -57,3 +57,12 @@ jobs:
             fi
           done
           echo "dirs=$DIRS" >> $GITHUB_OUTPUT
+
+      - name: Terragrunt plan in changed directories
+        if: steps.changed-dirs.outputs.dirs != ''
+        run: |
+          IFS=' ' read -r -a dirs <<< "${{ steps.changed-dirs.outputs.dirs }}"
+          for d in "${dirs[@]}"; do
+            echo "==> Running terragrunt plan in $d"
+            (cd "$d" && terragrunt init && terragrunt plan)
+          done
