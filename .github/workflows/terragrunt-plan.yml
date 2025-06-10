@@ -1,0 +1,50 @@
+name: Terragrunt Plan
+
+on:
+  push:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terragrunt-plan.yml'
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terragrunt-plan.yml'
+
+jobs:
+  terragrunt-plan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION=0.58.14
+          wget -qO- https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64 > terragrunt
+          chmod +x terragrunt
+          sudo mv terragrunt /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Cache Terragrunt cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            terraform/.terragrunt-cache
+          key: ${{ runner.os }}-terragrunt-${{ hashFiles('terraform/**/*.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terragrunt-
+
+      - name: Terragrunt Init
+        working-directory: terraform
+        run: terragrunt init
+
+      - name: Terragrunt Plan
+        working-directory: terraform
+        run: terragrunt plan

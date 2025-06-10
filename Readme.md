@@ -53,6 +53,8 @@ Backend instances are in a private subnet and go throught the nat instance to do
 ### Local Testing
 1. Build and test the Flask API:
    ```bash
+   cp .env.example .env
+   pip install -r requirements.txt
    cd app
    docker build -t flask-api .
    docker run -p 5001:5001 flask-api
@@ -68,9 +70,7 @@ Backend instances are in a private subnet and go throught the nat instance to do
 Deploy resources in this order to respect dependencies:
 1. `terraform/live/eu-west-1/flask-demo-vpc`
 2. `terraform/live/eu-west-1/security-groups/nginx-proxy`
-3. `terraform/live/eu-west-1/security-groups/flask-backend`asdf list jq
-
-
+3. `terraform/live/eu-west-1/security-groups/flask-backend`
 4. `terraform/live/eu-west-1/ami/amazon-linux2`
 5. `terraform/live/eu-west-1/ami/ubuntu-minimal`
 6. `terraform/live/eu-west-1/ec2/flask-backend`
@@ -84,7 +84,16 @@ terragrunt apply
 
 ### GitHub Actions Workflow
 
-Details to be added 
+A GitHub Actions workflow runs on push and pull request events and performs the following steps:
+
+- Checks out the repository.
+- Sets up Python 3.9 environment.
+- Installs dependencies including pytest and requests.
+- Runs the unit tests (pytest tests/test_app.py).
+- Optionally, builds and tests the Docker image.
+- Reports test results and fails the workflow if any tests fail.
+
+This ensures continuous integration and automated validation of the Flask backend code before deployment.
 
 ## Manual Deployment and Testing
 
@@ -116,4 +125,5 @@ You should get a json output showing  groups of hosts.
 3. Test the application:
    ```bash
    curl http://<nginx-proxy-public-ip>
+   <repo_root>/pytest tests/test_app.py
    ```
