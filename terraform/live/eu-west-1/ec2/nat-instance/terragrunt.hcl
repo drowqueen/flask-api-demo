@@ -31,13 +31,14 @@ inputs = {
   vpc_security_group_ids   = [dependency.vpc.outputs.default_security_group_id]
   key_name                 = "flask-demo"
   associate_public_ip      = true
+  instance_count           = 1
   source_dest_check        = false
   key_name                 = "flask-demo"
   tags = {
       Environment     = "dev"
       Role            = "nat"
       gateway_hosts   = "true"
-      Name            = "flask-nat"
+      Name            = "nat"
       Owner           = "terragrunt"
 
   }
