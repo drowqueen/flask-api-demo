@@ -2,10 +2,6 @@ include {
   path = find_in_parent_folders()
 }
 
-locals {
-  instance_count = 1
-}
-
 terraform {
   source = "${get_parent_terragrunt_dir("root")}/..//modules/ec2"
 }
@@ -23,6 +19,10 @@ dependency "ami" {
   mock_outputs = {
     ami_id = "placeholder-ami-id"
   }
+}
+
+locals {
+  instance_count = 2
 }
 
 inputs = {
