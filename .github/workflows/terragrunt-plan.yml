@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensure full history for accurate git diff
+          fetch-depth: 0  # full history needed for git diff
 
       - uses: ./.github/actions/aws-setup
         with:
@@ -40,74 +40,58 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-terragrunt-
 
-      - name: Get changed files
-        id: changed-files
+      - name: Find changed terragrunt directories
+        id: dirs-to-plan
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
           else
             BASE_SHA=$(git rev-parse HEAD^)
           fi
+
           echo "Using base SHA: $BASE_SHA"
-          git diff --name-only $BASE_SHA HEAD > changed_files.txt
-          cat changed_files.txt
-          FILES=$(cat changed_files.txt | tr '\n' ' ')
-          echo "files=$FILES" >> $GITHUB_OUTPUT
 
-      - name: Find changed modules
-        id: changed-modules
-        run: |
-          MODULES=""
-          for file in ${{ steps.changed-files.outputs.files }}; do
-            if [[ "$file" == terraform/modules/* ]]; then
-              mod=$(echo "$file" | cut -d '/' -f3)
-              MODULES="$MODULES $mod"
-            fi
-          done
-          MODULES=$(echo $MODULES | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "modules=$MODULES" >> $GITHUB_OUTPUT
+          # Find changed .tf and .hcl files under terraform/
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD | grep '^terraform/.*\.\(tf\|hcl\)$' || true)
 
-      - name: Find live dirs using changed modules
-        id: live-dirs-using-modules
-        run: |
-          USED_DIRS=""
-          for mod in ${{ steps.changed-modules.outputs.modules }}; do
-            echo "Searching live dirs using module: $mod"
-            matches=$(grep -rl "terraform/modules/$mod" terraform/live/*/terragrunt.hcl || true)
-            for f in $matches; do
-              d=$(dirname "$f")
-              USED_DIRS="$USED_DIRS $d"
+          # Collect live dirs where terragrunt.hcl exists and files changed
+          DIRS=""
+          for file in $CHANGED_FILES; do
+            d=$(dirname "$file")
+            # Walk up folders until we find a terragrunt.hcl or root terraform dir
+            while [ "$d" != "terraform" ] && [ "$d" != "." ]; do
+              if [ -f "$d/terragrunt.hcl" ]; then
+                DIRS="$DIRS $d"
+                break
+              fi
+              d=$(dirname "$d")
             done
           done
-          USED_DIRS=$(echo $USED_DIRS | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "used_dirs=$USED_DIRS" >> $GITHUB_OUTPUT
 
-      - name: Find changed live dirs with any .tf or .hcl changes
-        id: changed-live-dirs
+          # Remove duplicates and exclude terraform/live root explicitly (no terragrunt.hcl there)
+          DIRS=$(echo "$DIRS" | tr ' ' '\n' | sort -u | grep -v '^terraform/live$' || true)
+
+          echo "dirs=$DIRS" >> "$GITHUB_OUTPUT"
+
+      - name: Debug Terragrunt directories to plan
+        if: steps.dirs-to-plan.outputs.dirs != ''
         run: |
-          LIVE_DIRS=""
-          for file in ${{ steps.changed-files.outputs.files }}; do
-            if [[ "$file" == terraform/live/* ]]; then
-              d=$(dirname "$file")
-              LIVE_DIRS="$LIVE_DIRS $d"
-            fi
+          IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-plan.outputs.dirs }}"
+          echo "Terragrunt will plan these directories:"
+          for d in "${dirs[@]}"; do
+            echo "  - $d"
           done
-          LIVE_DIRS=$(echo $LIVE_DIRS | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "live_dirs=$LIVE_DIRS" >> $GITHUB_OUTPUT
 
-      - name: Combine all target dirs for plan
-        id: dirs-to-plan
-        run: |
-          USED="${{ steps.live-dirs-using-modules.outputs.used_dirs }}"
-          LIVECHANGED="${{ steps.changed-live-dirs.outputs.live_dirs }}"
-          ALL=$(echo "$USED $LIVECHANGED" | tr ' ' '\n' | sort -u | tr '\n' ' ')
-          echo "dirs=$ALL" >> $GITHUB_OUTPUT
-
-      - name: Run terragrunt plan in selected directories
+      - name: Terragrunt plan in changed directories
         if: steps.dirs-to-plan.outputs.dirs != ''
         run: |
           IFS=' ' read -r -a dirs <<< "${{ steps.dirs-to-plan.outputs.dirs }}"
           for d in "${dirs[@]}"; do
+            # Double check terragrunt.hcl exists before running
+            if [ ! -f "$d/terragrunt.hcl" ]; then
+              echo "Skipping $d because terragrunt.hcl not found"
+              continue
+            fi
             echo "==> Running terragrunt plan in $d"
             (cd "$d" && terragrunt init && terragrunt plan)
           done
