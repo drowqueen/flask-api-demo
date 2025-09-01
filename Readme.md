@@ -105,7 +105,7 @@ This ensures continuous integration and automated validation of the Flask backen
 - Detects the cumulative changes since the branch diverged from main.
 
 ### terragrunt-apply.yml
-¨
+
 Same steps as the terragrunt-plan workflow, but it applies the cumulative changes pushed
 to the branch since it diverged from main.
 
